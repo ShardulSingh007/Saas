@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 20 14.3% 4.1%;
+  --muted: 60 4.8% 95.9%;
+  --muted-foreground: 25 5.3% 44.7%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 20 14.3% 4.1%;
+  --card: 0 0% 100%;
+  --card-foreground: 20 14.3% 4.1%;
+  --border: 20 5.9% 90%;
+  --input: 20 5.9% 90%;
+  --primary: 207 90% 54%;
+  --primary-foreground: 211 100% 99%;
+  --secondary: 60 4.8% 95.9%;
+  --secondary-foreground: 24 9.8% 10%;
+  --accent: 60 4.8% 95.9%;
+  --accent-foreground: 24 9.8% 10%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 60 9.1% 97.8%;
+  --ring: 20 14.3% 4.1%;
+  --radius: 0.5rem;
+  
+  /* Chart colors */
+  --chart-1: 0 100% 50%;  /* Red (Federal tax) */
+  --chart-2: 39 100% 50%; /* Amber (State tax) */
+  --chart-3: 216 100% 50%; /* Blue (Self-Employment) */
+  --chart-4: 130 100% 42%; /* Green (Take Home) */
+  --chart-5: 271 100% 50%; /* Purple */
+  
+  /* Sidebar specific colors */
+  --sidebar-background: 222 47% 11%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-primary: 207 90% 54%;
+  --sidebar-primary-foreground: 211 100% 99%;
+  --sidebar-accent: 217 19% 27%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 217 19% 27%;
+  --sidebar-ring: 213 18% 49%;
+}
+
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --primary: 207 90% 54%;
+  --primary-foreground: 211 100% 99%;
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 240 4.9% 83.9%;
+  --radius: 0.5rem;
+  
+  /* Sidebar specific colors (dark mode) */
+  --sidebar-background: 222 47% 11%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-primary: 207 90% 54%;
+  --sidebar-primary-foreground: 211 100% 99%;
+  --sidebar-accent: 217 19% 27%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 217 19% 27%;
+  --sidebar-ring: 213 18% 49%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/* Custom styles for tax calculator app */
+.tax-calculator-sidebar-item {
+  @apply w-full flex items-center justify-between p-3 rounded hover:bg-sidebar-accent text-left transition-colors;
+}
+
+.tax-calculator-sidebar-item.active {
+  @apply bg-blue-500 bg-opacity-20;
+}
+
+.tax-calculator-sidebar-item-icon {
+  @apply mr-3 text-blue-500;
+}
+
+.tax-calculator-step {
+  @apply flex flex-col items-center;
+}
+
+.tax-calculator-step-circle {
+  @apply w-10 h-10 rounded-full flex items-center justify-center mb-2;
+}
+
+.tax-calculator-step-circle.active {
+  @apply bg-blue-500;
+}
+
+.tax-calculator-step-circle.inactive {
+  @apply bg-muted;
+}
+
+.tax-calculator-step-text.active {
+  @apply text-white;
+}
+
+.tax-calculator-step-text.inactive {
+  @apply text-muted-foreground;
+}
+
+/* Money input styling */
+.money-input-wrapper {
+  @apply relative;
+}
+
+.money-input-wrapper span {
+  @apply absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground;
+}
+
+.money-input-wrapper input {
+  @apply pl-8;
+}
+
+/* Tax bracket styling */
+.tax-bracket-row {
+  @apply flex justify-between text-sm py-1;
+}
+
+.tax-bracket-header {
+  @apply flex justify-between text-xs mb-1 text-muted-foreground;
+}
+
+/* Custom chart styling */
+.tax-chart-container {
+  @apply w-full h-full;
+}

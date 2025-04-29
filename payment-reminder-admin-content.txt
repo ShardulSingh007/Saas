@@ -1,0 +1,255 @@
+        <TabsContent value="payment-reminder">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Total Reminders
+                  </CardTitle>
+                  <Bell className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.paymentReminders.totalReminders.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground">
+                    +15% from last month
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Upcoming Payments
+                  </CardTitle>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.paymentReminders.totalUpcoming.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {((stats.paymentReminders.totalUpcoming / stats.paymentReminders.totalReminders) * 100).toFixed(1)}% of total
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Overdue Payments
+                  </CardTitle>
+                  <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.paymentReminders.totalOverdue.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {((stats.paymentReminders.totalOverdue / stats.paymentReminders.totalReminders) * 100).toFixed(1)}% of total
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Paid On Time
+                  </CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.paymentReminders.totalPaid.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {((stats.paymentReminders.totalPaid / stats.paymentReminders.totalReminders) * 100).toFixed(1)}% of total
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Payment Reminders</CardTitle>
+                  <CardDescription>
+                    Latest payment reminders created by users
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>User</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Due Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {stats.paymentReminders.recentReminders.map((reminder) => (
+                        <TableRow key={reminder.id}>
+                          <TableCell className="font-medium">{reminder.username}</TableCell>
+                          <TableCell>{reminder.title}</TableCell>
+                          <TableCell className="capitalize">{reminder.category}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(reminder.amount)}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={
+                                reminder.status === 'paid' 
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                                  : reminder.status === 'overdue'
+                                  ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                                  : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
+                              }
+                            >
+                              {reminder.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">{reminder.dueDate}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+              
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Reminder Categories</CardTitle>
+                    <CardDescription>
+                      Distribution of payment reminders by category
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-48">
+                      <div className="space-y-4">
+                        {stats.paymentReminders.reminderCategories.map((category, i) => (
+                          <div key={i}>
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="text-sm font-medium capitalize">{category.category}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {category.count} ({category.percentage}%)
+                              </div>
+                            </div>
+                            <div className="h-2 bg-secondary overflow-hidden rounded-full">
+                              <div 
+                                className="h-full bg-blue-500" 
+                                style={{ width: `${category.percentage}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Notification Preferences</CardTitle>
+                    <CardDescription>
+                      User notification channel preferences
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="text-sm font-medium">Email</div>
+                          <div className="text-sm text-muted-foreground">
+                            {stats.paymentReminders.notificationStats.email}%
+                          </div>
+                        </div>
+                        <div className="h-2 bg-secondary overflow-hidden rounded-full">
+                          <div 
+                            className="h-full bg-blue-500" 
+                            style={{ width: `${stats.paymentReminders.notificationStats.email}%` }}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="text-sm font-medium">SMS</div>
+                          <div className="text-sm text-muted-foreground">
+                            {stats.paymentReminders.notificationStats.sms}%
+                          </div>
+                        </div>
+                        <div className="h-2 bg-secondary overflow-hidden rounded-full">
+                          <div 
+                            className="h-full bg-green-500" 
+                            style={{ width: `${stats.paymentReminders.notificationStats.sms}%` }}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="text-sm font-medium">Push Notifications</div>
+                          <div className="text-sm text-muted-foreground">
+                            {stats.paymentReminders.notificationStats.push}%
+                          </div>
+                        </div>
+                        <div className="h-2 bg-secondary overflow-hidden rounded-full">
+                          <div 
+                            className="h-full bg-purple-500" 
+                            style={{ width: `${stats.paymentReminders.notificationStats.push}%` }}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="text-sm font-medium">WhatsApp</div>
+                          <div className="text-sm text-muted-foreground">
+                            {stats.paymentReminders.notificationStats.whatsapp}%
+                          </div>
+                        </div>
+                        <div className="h-2 bg-secondary overflow-hidden rounded-full">
+                          <div 
+                            className="h-full bg-teal-500" 
+                            style={{ width: `${stats.paymentReminders.notificationStats.whatsapp}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Emotional Tone Usage</CardTitle>
+                    <CardDescription>
+                      Distribution of emotional tones for payment reminders
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {stats.paymentReminders.emotionalToneUsage.map((tone, i) => (
+                        <div key={i}>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="text-sm font-medium capitalize">{tone.tone}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {tone.percentage}%
+                            </div>
+                          </div>
+                          <div className="h-2 bg-secondary overflow-hidden rounded-full">
+                            <div 
+                              className={`h-full ${
+                                tone.tone === 'gentle' 
+                                  ? 'bg-blue-500' 
+                                  : tone.tone === 'professional' 
+                                  ? 'bg-purple-500' 
+                                  : 'bg-amber-500'
+                              }`}
+                              style={{ width: `${tone.percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </TabsContent>

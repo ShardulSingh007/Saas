@@ -1,0 +1,94 @@
+Add a new page and Create a modern, responsive web page for an "Invoice Generator Software" tool. The layout should be clean, professional, and easy to use. Include the following features and sections:
+
+🖥️ Page Layout:
+Full-width hero section with title: "Smart Invoice Generator"
+
+Subtitle: "Create and send professional invoices in seconds"
+
+CTA Button: "Generate Invoice Now"
+
+Light/dark theme toggle
+
+📋 Invoice Form Section:
+Editable invoice title
+
+Business details section (name, logo upload, address, phone, email)
+
+Client details section (name, address, contact info)
+
+Dynamic itemized list:
+
+Item description
+
+Quantity
+
+Rate
+
+Auto-calculated line total
+
+Add/remove line items
+
+Tax and discount fields (percentage or fixed amount)
+
+Notes section (payment terms, thank you message)
+
+Currency selector (USD, EUR, GBP, INR, etc.)
+
+Date picker (invoice date + due date)
+
+Invoice number (auto-generate + editable)
+
+💸 Total Calculation:
+Subtotal
+
+Tax
+
+Discount
+
+Grand total (auto-calculated in real-time)
+
+📤 Export & Sharing:
+Download invoice as PDF
+
+Print invoice
+
+Email invoice directly to client (optional)
+
+Save to local browser (optional)
+
+💳 Payment Integration:
+Add "Pay Now" button on the generated invoice
+
+Allow linking to payment gateways (Stripe, PayPal, Razorpay, etc.)
+
+Option to embed custom payment link
+
+Payment status tracker (Paid / Unpaid / Partially Paid)
+
+Automatically update invoice when payment is received (optional)
+
+🔄 Bonus Features:
+Load sample invoice (for demo/testing)
+
+Reuse previous invoices
+
+Auto-save invoices using localStorage
+
+Mobile-optimized and responsive
+
+📊 Design:
+Professional and clean UI
+
+Card-based layout with smooth shadows, rounded corners
+
+Icons for actions (add item, download, print, email, payment)
+
+Use Tailwind CSS or clean modern utility-based styling if possible
+
+
+
+
+How do I login in admin page what are credentials
+and in smart invoice generator add user guide
+
+
