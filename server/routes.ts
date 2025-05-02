@@ -11,7 +11,7 @@ import { sendEmail } from "./email";
 function setupAuth(app: Express) {
   // Generate random session secret
   const sessionSecret = crypto.randomBytes(32).toString('hex');
-  
+
   // Configure session middleware
   app.use(session({
     secret: sessionSecret,
@@ -29,22 +29,22 @@ function setupAuth(app: Express) {
   app.post('/api/auth/signup', async (req, res) => {
     try {
       const { name, email, password } = req.body;
-      
+
       if (!email || !password) {
         return res.status(400).json({ error: 'Email and password are required' });
       }
-      
+
       // Extract username from email (before the @ symbol)
       const username = email.split('@')[0];
-      
+
       const existingUser = await storage.getUserByUsername(username);
-      
+
       if (existingUser) {
         return res.status(400).json({ error: 'User already exists with this email' });
       }
-      
+
       const hashedPassword = await storage.hashPassword(password);
-      
+
       // Create user with username derived from email
       const user = await storage.createUser({
         username,
@@ -53,11 +53,11 @@ function setupAuth(app: Express) {
         email,
         isAdmin: email === 'admin@example.com' ? true : false,
       });
-      
+
       // Save user info in session (excluding password)
       const { password: _, ...userInfo } = user;
       (req.session as any).user = userInfo;
-      
+
       return res.status(201).json(userInfo);
     } catch (error) {
       console.error('Signup error:', error);
@@ -68,86 +68,86 @@ function setupAuth(app: Express) {
   app.post('/api/auth/login', async (req, res) => {
     try {
       const { email, password } = req.body;
-      
+
       if (!email || !password) {
         return res.status(400).json({ error: 'Email and password are required' });
       }
-      
+
       // Try to find user by email (checking if username matches email username part)
       const username = email.split('@')[0];
       const user = await storage.getUserByUsername(username);
-      
+
       if (!user) {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
-      
+
       const isPasswordValid = await storage.verifyPassword(password, user.password);
-      
+
       if (!isPasswordValid) {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
-      
+
       // Save user info in session (excluding password)
       const { password: _, ...userInfo } = user;
       (req.session as any).user = userInfo;
-      
+
       return res.json(userInfo);
     } catch (error) {
       console.error('Login error:', error);
       res.status(500).json({ error: 'An error occurred during login' });
     }
   });
-  
+
   // Admin login endpoint
   app.post('/api/auth/admin/login', async (req, res) => {
     try {
       const { username, password } = req.body;
-      
+
       if (!username || !password) {
         return res.status(400).json({ error: 'Username and password are required' });
       }
-      
+
       const user = await storage.getUserByUsername(username);
-      
+
       if (!user || !user.isAdmin) {
         // Don't reveal if it's a non-admin account for security
         return res.status(401).json({ error: 'Invalid admin credentials' });
       }
-      
+
       const isPasswordValid = await storage.verifyPassword(password, user.password);
-      
+
       if (!isPasswordValid) {
         return res.status(401).json({ error: 'Invalid admin credentials' });
       }
-      
+
       // Save user info in session (excluding password)
       const { password: _, ...userInfo } = user;
       (req.session as any).user = userInfo;
-      
+
       return res.json(userInfo);
     } catch (error) {
       console.error('Admin login error:', error);
       res.status(500).json({ error: 'An error occurred during admin login' });
     }
   });
-  
+
   app.post('/api/auth/logout', (req, res) => {
     req.session.destroy((err) => {
       if (err) {
         return res.status(500).json({ error: 'Failed to logout' });
       }
-      
+
       res.status(200).json({ message: 'Logged out successfully' });
     });
   });
-  
+
   app.get('/api/auth/me', (req, res) => {
     const user = (req.session as any).user;
-    
+
     if (!user) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
-    
+
     return res.json(user);
   });
 }
@@ -180,11 +180,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = Number(req.params.id);
       const calculation = await storage.getTaxCalculation(id);
-      
+
       if (!calculation) {
         return res.status(404).json({ error: 'Tax calculation not found' });
       }
-      
+
       res.json(calculation);
     } catch (error) {
       res.status(500).json({ error: 'Failed to retrieve tax calculation' });
@@ -196,11 +196,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = Number(req.params.id);
       const data = insertTaxCalculationSchema.parse(req.body);
       const updatedCalculation = await storage.updateTaxCalculation(id, data);
-      
+
       if (!updatedCalculation) {
         return res.status(404).json({ error: 'Tax calculation not found' });
       }
-      
+
       res.json(updatedCalculation);
     } catch (error) {
       res.status(400).json({ error: 'Invalid tax calculation data' });
@@ -211,11 +211,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = Number(req.params.id);
       const success = await storage.deleteTaxCalculation(id);
-      
+
       if (!success) {
         return res.status(404).json({ error: 'Tax calculation not found' });
       }
-      
+
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: 'Failed to delete tax calculation' });
@@ -242,7 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/tax-reference/filing-statuses', (req, res) => {
     const country = req.query.country || 'us';
-    
+
     const filingStatuses: Record<string, any[]> = {
       us: [
         { id: 'single', name: 'Single' },
@@ -261,7 +261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { id: 'single', name: 'Individual' },
       ],
     };
-    
+
     res.json(filingStatuses[country as string] || filingStatuses.us);
   });
 
@@ -277,14 +277,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         amount,
         dueDate
       } = req.body;
-      
+
       if (!recipientEmail || !senderEmail || !invoiceNumber || !invoicePdfBase64) {
         return res.status(400).json({ 
           success: false, 
           error: 'Missing required fields for sending invoice email' 
         });
       }
-      
+
       // Format the email
       const subject = `Invoice #${invoiceNumber} from ${businessName || 'Your Business'}`;
       const text = `Please find attached Invoice #${invoiceNumber} for ${amount || 'the requested services'}. Payment is due by ${dueDate || 'the specified date'}. Thank you for your business.`;
@@ -298,7 +298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           <p>Best regards,<br>${businessName || 'Your Business'}</p>
         </div>
       `;
-      
+
       // Send the email with attachment
       const emailSent = await sendEmail({
         to: recipientEmail,
@@ -315,7 +315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         ]
       });
-      
+
       if (emailSent) {
         return res.status(200).json({ success: true, message: 'Invoice email sent successfully' });
       } else {
@@ -331,31 +331,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/finance-buddy/chat', async (req, res) => {
     try {
       const { message, expenseData } = req.body;
-      
+
       if (!message) {
         return res.status(400).json({ 
           success: false, 
           error: 'Missing message in request' 
         });
       }
-      
+
       // Import Anthropic here to avoid issues during startup if API key isn't available
       const Anthropic = require('@anthropic-ai/sdk').default;
-      
+
       if (!process.env.ANTHROPIC_API_KEY) {
         return res.status(500).json({
           success: false,
           error: 'ANTHROPIC_API_KEY is not configured'
         });
       }
-      
+
       const anthropic = new Anthropic({
         apiKey: process.env.ANTHROPIC_API_KEY,
       });
-      
+
       // Format expense data for the AI
       const expenseSummary = formatExpenseData(expenseData);
-      
+
       // Generate AI response
       const response = await anthropic.messages.create({
         model: 'claude-3-7-sonnet-20250219', // The newest Anthropic model
@@ -375,12 +375,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
         ],
       });
-      
+
       return res.status(200).json({ 
         success: true, 
         message: response.content[0].text
       });
-      
+
     } catch (error) {
       console.error('Error generating AI response:', error);
       return res.status(500).json({ 
@@ -389,38 +389,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  
+
   function formatExpenseData(expenseData: any): string {
     if (!expenseData || !expenseData.expenses || expenseData.expenses.length === 0) {
       return "No expense data provided.";
     }
-  
+
     const { expenses, categoryTotals, monthlyTotal } = expenseData;
-    
+
     let summary = `Monthly total: $${monthlyTotal.toFixed(2)}\n\n`;
-    
+
     summary += "Top expense categories:\n";
     const sortedCategories = Object.entries(categoryTotals)
       .sort(([, a]: any, [, b]: any) => b - a)
       .slice(0, 3);
-    
+
     sortedCategories.forEach(([category, amount]: [string, any]) => {
       const percentage = (amount / monthlyTotal) * 100;
       summary += `- ${category}: $${amount.toFixed(2)} (${percentage.toFixed(1)}%)\n`;
     });
-    
+
     summary += "\nRecent transactions:\n";
     expenses.slice(0, 5).forEach((expense: any) => {
       summary += `- $${expense.amount.toFixed(2)} for ${expense.description} (${expense.category})\n`;
     });
-    
+
     return summary;
   }
-
-  const httpServer = createServer(app);
-  return httpServer;
-}
-
 
   // Invoice management routes
   app.post('/api/invoices', async (req, res) => {
@@ -483,3 +478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to fetch invoices' });
     }
   });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
