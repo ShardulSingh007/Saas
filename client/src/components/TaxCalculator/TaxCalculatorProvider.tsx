@@ -109,11 +109,11 @@ export const TaxCalculatorProvider: React.FC<{ children: React.ReactNode }> = ({
   // Step state
   const [currentStep, setCurrentStep] = useState<Step>(Step.BasicInfo);
   
-  // Basic info state
-  const [country, setCountry] = useState<string>("us");
-  const [taxYear, setTaxYear] = useState<number>(2023);
-  const [filingStatus, setFilingStatus] = useState<string>("single");
-  const [age, setAge] = useState<number>(30);
+  // Basic info state with proper initialization
+  const [country, setCountry] = useState<string>(() => localStorage.getItem('taxCalculator_country') || "us");
+  const [taxYear, setTaxYear] = useState<number>(() => parseInt(localStorage.getItem('taxCalculator_taxYear') || "2023", 10));
+  const [filingStatus, setFilingStatus] = useState<string>(() => localStorage.getItem('taxCalculator_filingStatus') || "single");
+  const [age, setAge] = useState<number>(() => parseInt(localStorage.getItem('taxCalculator_age') || "30", 10));
   
   // Income data state
   const [incomeData, setIncomeData] = useState<IncomeData>(defaultIncomeData);
