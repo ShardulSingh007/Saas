@@ -420,3 +420,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
+
+
+  // Invoice management routes
+  app.post('/api/invoices', async (req, res) => {
+    try {
+      const { user } = req.session as any;
+      if (!user) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+
+      const invoice = await storage.createInvoice({
+        ...req.body,
+        userId: user.id
+      });
+
+      res.status(201).json(invoice);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to save invoice' });
+    }
+  });
+
+  app.get('/api/invoices', async (req, res) => {
+    try {
+      const { user } = req.session as any;
+      if (!user) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+
+      const invoices = await storage.getInvoices(user.id);
+      res.json(invoices);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch invoices' });
+    }
+  });
+
+  // Admin routes
+  app.get('/api/admin/users', async (req, res) => {
+    try {
+      const { user } = req.session as any;
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: 'Not authorized' });
+      }
+
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch users' });
+    }
+  });
+
+  app.get('/api/admin/invoices', async (req, res) => {
+    try {
+      const { user } = req.session as any;
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: 'Not authorized' });
+      }
+
+      const invoices = await storage.getAllInvoices();
+      res.json(invoices);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch invoices' });
+    }
+  });

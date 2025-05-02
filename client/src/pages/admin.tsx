@@ -9,16 +9,47 @@ import { BarChart3, Users, Settings, LogOut, ArrowLeft } from "lucide-react";
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
+  const [users, setUsers] = React.useState([]);
+  const [invoices, setInvoices] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
 
-  if (!user?.isAdmin) {
-    window.location.href = '/admin-login';
-    return null;
-  }
+  React.useEffect(() => {
+    if (!user?.isAdmin) {
+      window.location.href = '/admin-login';
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        const [usersRes, invoicesRes] = await Promise.all([
+          fetch('/api/admin/users'),
+          fetch('/api/admin/invoices')
+        ]);
+        
+        const [usersData, invoicesData] = await Promise.all([
+          usersRes.json(),
+          invoicesRes.json()
+        ]);
+        
+        setUsers(usersData);
+        setInvoices(invoicesData);
+      } catch (error) {
+        console.error('Error fetching admin data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user]);
 
   const handleLogout = async () => {
     await logout();
     window.location.href = '/admin-login';
   };
+
+  if (!user?.isAdmin) return null;
+  if (loading) return <div className="flex justify-center items-center min-h-screen"><LoadingSpinner /></div>;
 
   return (
     <div className="min-h-screen bg-background">

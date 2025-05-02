@@ -1629,3 +1629,35 @@ const currencySymbols: {[key: string]: string} = {
 };
 
 export default InvoiceGenerator;
+
+{/* Invoice History Section */}
+<Card className="mt-6">
+  <CardHeader>
+    <CardTitle>My Invoices</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="space-y-4">
+      {invoices?.map((invoice) => (
+        <div key={invoice.id} className="flex items-center justify-between p-4 border rounded-lg">
+          <div>
+            <p className="font-medium">{invoice.title}</p>
+            <p className="text-sm text-muted-foreground">Invoice #{invoice.invoiceNumber}</p>
+            <p className="text-sm text-muted-foreground">
+              {format(new Date(invoice.createdAt), 'PPP')}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => downloadSavedInvoice(invoice)}>
+              <Download className="h-4 w-4 mr-1" />
+              Download
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => viewInvoice(invoice)}>
+              <Eye className="h-4 w-4 mr-1" />
+              View
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  </CardContent>
+</Card>
