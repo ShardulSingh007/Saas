@@ -1,5 +1,12 @@
-import { users, type User, type InsertUser, taxCalculations, type TaxCalculation, type InsertTaxCalculation } from "@shared/schema";
-import { EventEmitter } from 'events';
+import {
+  users,
+  type User,
+  type InsertUser,
+  taxCalculations,
+  type TaxCalculation,
+  type InsertTaxCalculation,
+} from "@shared/schema";
+import { EventEmitter } from "events";
 
 // In-memory session store class
 class InMemoryStore extends EventEmitter {
@@ -51,14 +58,20 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  verifyPassword(suppliedPassword: string, storedHash: string): Promise<boolean>;
+  verifyPassword(
+    suppliedPassword: string,
+    storedHash: string,
+  ): Promise<boolean>;
   hashPassword(password: string): Promise<string>;
 
   // Tax calculation methods
   createTaxCalculation(data: InsertTaxCalculation): Promise<TaxCalculation>;
   getTaxCalculation(id: number): Promise<TaxCalculation | undefined>;
   getTaxCalculations(userId?: number): Promise<TaxCalculation[]>;
-  updateTaxCalculation(id: number, data: InsertTaxCalculation): Promise<TaxCalculation | undefined>;
+  updateTaxCalculation(
+    id: number,
+    data: InsertTaxCalculation,
+  ): Promise<TaxCalculation | undefined>;
   deleteTaxCalculation(id: number): Promise<boolean>;
 
   // Session store for authentication
@@ -86,23 +99,23 @@ export class MemStorage implements IStorage {
   }
 
   private async initializeAdminUser() {
-    const adminExists = await this.getUserByUsername('admin');
+    const adminExists = await this.getUserByUsername("admin");
 
     if (!adminExists) {
       // Create admin user with properly hashed password
-      const hashedPassword = await this.hashPassword('your_new_password'); // Replace with your desired password
+      const hashedPassword = await this.hashPassword("Adminpanelaccess"); // Replace with your desired password
 
       const adminUser: User = {
         id: this.userIdCounter++,
-        username: 'your_new_username', // Replace with your desired username
+        username: "Privateaccessonly", // Replace with your desired username
         password: hashedPassword,
         isAdmin: true,
-        name: 'Administrator',
-        email: 'admin@example.com'
+        name: "Administrator",
+        email: "admin@example.com",
       };
 
       this.users.set(adminUser.id, adminUser);
-      console.log('Admin user created successfully');
+      console.log("Admin user created successfully");
     }
   }
 
@@ -113,7 +126,10 @@ export class MemStorage implements IStorage {
     return password;
   }
 
-  async verifyPassword(suppliedPassword: string, storedHash: string): Promise<boolean> {
+  async verifyPassword(
+    suppliedPassword: string,
+    storedHash: string,
+  ): Promise<boolean> {
     // In a real app, we would use a proper verification method
     // For this demo, we're just comparing the strings
     return suppliedPassword === storedHash;
@@ -131,26 +147,26 @@ export class MemStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.email === email
-    );
+    return Array.from(this.users.values()).find((user) => user.email === email);
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
-    const user: User = { 
-      ...insertUser, 
+    const user: User = {
+      ...insertUser,
       id,
       name: insertUser.name || null,
       email: insertUser.email || null,
-      isAdmin: insertUser.isAdmin || false
+      isAdmin: insertUser.isAdmin || false,
     };
     this.users.set(id, user);
     return user;
   }
 
   // Tax Calculation Methods
-  async createTaxCalculation(data: InsertTaxCalculation): Promise<TaxCalculation> {
+  async createTaxCalculation(
+    data: InsertTaxCalculation,
+  ): Promise<TaxCalculation> {
     const id = this.taxCalculationIdCounter++;
     const now = new Date();
 
@@ -164,7 +180,7 @@ export class MemStorage implements IStorage {
       // Ensure all required fields have values
       deductionsData: data.deductionsData || null,
       creditsData: data.creditsData || null,
-      calculationResults: data.calculationResults || null
+      calculationResults: data.calculationResults || null,
     };
 
     this.taxCalculationStore.set(id, taxCalculation);
@@ -179,13 +195,16 @@ export class MemStorage implements IStorage {
     const allCalculations = Array.from(this.taxCalculationStore.values());
 
     if (userId !== undefined) {
-      return allCalculations.filter(calc => calc.userId === userId);
+      return allCalculations.filter((calc) => calc.userId === userId);
     }
 
     return allCalculations;
   }
 
-  async updateTaxCalculation(id: number, data: InsertTaxCalculation): Promise<TaxCalculation | undefined> {
+  async updateTaxCalculation(
+    id: number,
+    data: InsertTaxCalculation,
+  ): Promise<TaxCalculation | undefined> {
     const existingCalculation = this.taxCalculationStore.get(id);
 
     if (!existingCalculation) {
@@ -196,7 +215,7 @@ export class MemStorage implements IStorage {
       ...existingCalculation,
       ...data,
       id,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     this.taxCalculationStore.set(id, updatedCalculation);
