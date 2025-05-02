@@ -183,6 +183,23 @@ const InvoiceGenerator: React.FC = () => {
   const [activeTab, setActiveTab] = useState('edit');
   const [showGuide, setShowGuide] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [invoices, setInvoices] = useState<any[]>([]);
+
+  // Fetch invoices
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      try {
+        const response = await fetch('/api/invoices');
+        if (response.ok) {
+          const data = await response.json();
+          setInvoices(data);
+        }
+      } catch (error) {
+        console.error('Error fetching invoices:', error);
+      }
+    };
+    fetchInvoices();
+  }, []);
 
   // Theme handling
   const { theme, setTheme } = useTheme();
