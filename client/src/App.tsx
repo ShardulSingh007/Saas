@@ -57,12 +57,7 @@ function Router() {
       <Route path="/signup" component={SignupPage} />
       <Route path="/admin-login" component={AdminLogin} />
       <Route path="/admin">
-        {({ params }) => {
-          const { user, isLoading } = useAuth();
-          if (isLoading) return <LoadingSpinner />;
-          if (!user?.isAdmin) return <Redirect to="/" />;
-          return <Admin />;
-        }}
+        <AdminProtectedRoute path="/admin" component={Admin} />
       </Route>
       <Route path="/invoice-generator" component={InvoiceGenerator} />
       <Route path="/expense-tracker" component={ExpenseTracker} />
