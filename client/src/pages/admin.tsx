@@ -8,10 +8,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { BarChart3, Users, Settings, LogOut, ArrowLeft } from "lucide-react";
 
 export default function AdminDashboard() {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { user, logout } = useAuth();
 
-  if (!isAuthenticated || !user?.isAdmin) {
-    return <div>Not authorized</div>;
+  if (!user?.isAdmin) {
+    window.location.href = '/admin-login';
+    return null;
   }
 
   const handleLogout = async () => {

@@ -21,12 +21,9 @@ export function AdminProtectedRoute({
     );
   }
 
-  if (!user || !isAdmin) {
-    return (
-      <Route path={path}>
-        <Redirect to="/admin-login" />
-      </Route>
-    );
+  if (!user?.isAdmin) {
+    window.location.href = '/admin-login';
+    return null;
   }
 
   return (
