@@ -32,10 +32,10 @@ export default function AdminLoginPage() {
 
   // Redirect if already logged in as admin
   React.useEffect(() => {
-    if (user && isAdmin) {
-      navigate("/admin");
+    if (user?.isAdmin) {
+      window.location.href = "/admin";
     }
-  }, [user, isAdmin, navigate]);
+  }, [user]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),

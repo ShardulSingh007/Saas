@@ -204,7 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signup,
       logout,
       googleSignIn,
-      isAdmin: user?.role === 'admin'
+      isAdmin: user?.isAdmin === true
     }}>
       {children}
     </AuthContext.Provider>
