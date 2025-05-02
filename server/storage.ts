@@ -90,15 +90,15 @@ export class MemStorage implements IStorage {
 
     if (!adminExists) {
       // Create admin user with properly hashed password
-      const hashedPassword = await this.hashPassword('SecureAdmin2024!');
+      const hashedPassword = await this.hashPassword('admin123'); // Corrected password
 
       const adminUser: User = {
         id: this.userIdCounter++,
-        username: 'superadmin',
+        username: 'admin', // Corrected username
         password: hashedPassword,
         isAdmin: true,
-        name: 'System Administrator',
-        email: 'admin@financetools.com'
+        name: 'Administrator', // Corrected name
+        email: 'admin@example.com' // Corrected email
       };
 
       this.users.set(adminUser.id, adminUser);
