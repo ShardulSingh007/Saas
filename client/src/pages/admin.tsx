@@ -1,72 +1,126 @@
-import React, { useState } from "react";
+
+import React from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { formatCurrency } from "@/lib/taxCalculator";
-import { useQuery } from "@tanstack/react-query";
-import {
-  BarChart3,
-  Users,
-  Settings,
-  Calculator
-} from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "@/components/ui/table";
+import { BarChart3, Users, Settings, LogOut, ArrowLeft } from "lucide-react";
 
 export default function AdminDashboard() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !user?.isAdmin) {
     return <div>Not authorized</div>;
   }
 
+  const handleLogout = async () => {
+    await logout();
+    window.location.href = '/admin-login';
+  };
+
   return (
-    <div className="container mx-auto p-4">
-      <header className="border-b border-border mb-8">
-        <div className="container mx-auto px-4 flex items-center justify-between h-16">
+    <div className="min-h-screen bg-background">
+      <header className="border-b">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className="flex items-center">
-              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mr-2">
-                Finance
-              </span>
-              <span className="text-2xl font-bold">Tools</span>
-            </div>
-
-            <div className="hidden md:flex space-x-4 ml-8">
-              <Button
-                variant="default"
-                className="flex items-center bg-blue-600 hover:bg-blue-700"
-                onClick={() => window.location.href = "/admin"}
-              >
-                <Lock className="mr-1 h-4 w-4" />
-                <span className="font-medium">Administrator</span>
-              </Button>
-            </div>
+            <span className="text-2xl font-bold">Admin Dashboard</span>
           </div>
-
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => window.location.href = "/"}
-            >
-              Return to Site
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" onClick={() => window.location.href = "/"}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Site
+            </Button>
+            <Button variant="destructive" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
             </Button>
           </div>
         </div>
       </header>
-      <h1>Admin Dashboard</h1>
-      {/* Your admin dashboard components here */}
+
+      <div className="container mx-auto p-4">
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Users className="mr-2 h-4 w-4" />
+                    Total Users
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">0</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    Total Transactions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">0</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Settings className="mr-2 h-4 w-4" />
+                    System Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">Active</div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="users">
+            <Card>
+              <CardHeader>
+                <CardTitle>User Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[400px]">
+                  <div className="text-muted-foreground">No users found</div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <Card>
+              <CardHeader>
+                <CardTitle>Admin Settings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <h3 className="font-medium">System Configuration</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Configure system-wide settings and preferences
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
