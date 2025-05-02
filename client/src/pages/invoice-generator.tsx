@@ -12,23 +12,24 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { format } from 'date-fns';
-import { 
-  CalendarIcon, 
-  Printer, 
-  Download, 
-  Mail, 
-  Plus, 
-  Trash2, 
-  Moon, 
-  Sun, 
-  FileText, 
-  HelpCircle, 
-  RotateCw, 
-  DollarSign, 
-  CreditCard, 
+import {
+  CalendarIcon,
+  Printer,
+  Download,
+  Mail,
+  Plus,
+  Trash2,
+  Moon,
+  Sun,
+  FileText,
+  HelpCircle,
+  RotateCw,
+  DollarSign,
+  CreditCard,
   Save,
   Loader2,
-  Check
+  Check,
+  Eye
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useToast } from "@/hooks/use-toast";
@@ -711,6 +712,14 @@ const InvoiceGenerator: React.FC = () => {
 
   };
 
+  const downloadSavedInvoice = (invoice: any) => {
+    //Implement download logic here
+  };
+
+  const viewInvoice = (invoice: any) => {
+    //Implement view logic here
+  };
+
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -796,16 +805,16 @@ const InvoiceGenerator: React.FC = () => {
         <h1 className="text-4xl font-bold mb-3">Smart Invoice Generator</h1>
         <p className="text-xl text-muted-foreground mb-6">Create and send professional invoices in seconds</p>
         <div className="flex justify-center space-x-4">
-          <Button 
-            size="lg" 
-            className="bg-primary" 
+          <Button
+            size="lg"
+            className="bg-primary"
             onClick={() => setActiveTab('edit')}
           >
             <FileText className="mr-2 h-5 w-5" />
             Generate Invoice Now
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => setShowGuide(!showGuide)}
           >
             <HelpCircle className="mr-2 h-5 w-5" />
@@ -1048,9 +1057,9 @@ const InvoiceGenerator: React.FC = () => {
                       <div className="mt-1 mb-3">
                         {logoPreview && (
                           <div className="mb-2">
-                            <img 
-                              src={logoPreview} 
-                              alt="Business logo" 
+                            <img
+                              src={logoPreview}
+                              alt="Business logo"
                               className="max-h-16 max-w-full"
                             />
                           </div>
@@ -1270,8 +1279,8 @@ const InvoiceGenerator: React.FC = () => {
                           {formatCurrency(item.amount, invoiceData.currency)}
                         </div>
                         <div className="col-span-1 text-right">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="icon"
                             onClick={() => handleRemoveItem(item.id)}
                             disabled={invoiceData.items.length <= 1}
@@ -1325,7 +1334,7 @@ const InvoiceGenerator: React.FC = () => {
                         </div>
                         <div className="flex items-center mt-2">
                           {invoiceData.taxType === 'percentage' && <span className="mr-2">%</span>}
-                          {invoiceData.taxType === 'fixed' && 
+                          {invoiceData.taxType === 'fixed' &&
                             <span className="mr-2">{currencySymbols[invoiceData.currency] || '$'}</span>
                           }
                           <Input
@@ -1360,7 +1369,7 @@ const InvoiceGenerator: React.FC = () => {
                         </div>
                         <div className="flex items-center mt-2">
                           {invoiceData.discountType === 'percentage' && <span className="mr-2">%</span>}
-                          {invoiceData.discountType === 'fixed' && 
+                          {invoiceData.discountType === 'fixed' &&
                             <span className="mr-2">{currencySymbols[invoiceData.currency] || '$'}</span>
                           }
                           <Input
@@ -1437,9 +1446,9 @@ const InvoiceGenerator: React.FC = () => {
                     <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                       <div>
                         {logoPreview && (
-                          <img 
-                            src={logoPreview} 
-                            alt="Business logo" 
+                          <img
+                            src={logoPreview}
+                            alt="Business logo"
                             className="max-h-20 max-w-[200px] mb-4"
                           />
                         )}
@@ -1473,8 +1482,8 @@ const InvoiceGenerator: React.FC = () => {
                               'bg-gray-100 text-gray-800'
                             }`}>
                               {invoiceData.status === 'paid' ? 'Paid' :
-                               invoiceData.status === 'partial' ? 'Partially Paid' :
-                               invoiceData.status === 'unpaid' ? 'Unpaid' : 'Draft'}
+                                invoiceData.status === 'partial' ? 'Partially Paid' :
+                                invoiceData.status === 'unpaid' ? 'Unpaid' : 'Draft'}
                             </span>
                           </div>
                         </div>
@@ -1627,13 +1636,47 @@ const InvoiceGenerator: React.FC = () => {
               </div>
             </TabsContent>
           </Tabs>
+          {/* Invoice History Section */}
+          {invoices && invoices.length > 0 && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>My Invoices</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {invoices.map((invoice) => (
+                    <div key={invoice.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <p className="font-medium">{invoice.title}</p>
+                        <p className="text-sm text-muted-foreground">Invoice #{invoice.invoiceNumber}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(invoice.createdAt), 'PPP')}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => downloadSavedInvoice(invoice)}>
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => viewInvoice(invoice)}>
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-// Helper for currency symbols
+export default InvoiceGenerator;
+
 const currencySymbols: {[key: string]: string} = {
   'USD': '$',
   'EUR': '€',
@@ -1644,41 +1687,3 @@ const currencySymbols: {[key: string]: string} = {
   'AUD': 'A$',
   'CNY': '¥',
 };
-
-// Add Invoice History Section inside the component, right before the final closing div
-  {invoices && invoices.length > 0 && (
-    <Card className="mt-6">
-      <CardHeader>
-        <CardTitle>My Invoices</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {invoices.map((invoice) => (
-            <div key={invoice.id} className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <p className="font-medium">{invoice.title}</p>
-                <p className="text-sm text-muted-foreground">Invoice #{invoice.invoiceNumber}</p>
-                <p className="text-sm text-muted-foreground">
-                  {format(new Date(invoice.createdAt), 'PPP')}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => downloadSavedInvoice(invoice)}>
-                  <Download className="h-4 w-4 mr-1" />
-                  Download
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => viewInvoice(invoice)}>
-                  <Eye className="h-4 w-4 mr-1" />
-                  View
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  )}
-  </div>
-);
-
-export default InvoiceGenerator;
