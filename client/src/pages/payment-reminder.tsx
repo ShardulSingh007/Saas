@@ -1469,7 +1469,7 @@ const PaymentReminderSystem: React.FC = () => {
                         sms: newPayment.notificationSettings?.sms ?? false,
                         push: newPayment.notificationSettings?.push ?? true,
                         whatsapp: checked,
-                        timing: newtiming: newPayment.notificationSettings?.timing ?? [1, 3],
+                        timing: newPayment.notificationSettings?.timing ?? [1, 3],
                         sound: newPayment.notificationSettings?.sound ?? 'standard'
                       }
                     })}
