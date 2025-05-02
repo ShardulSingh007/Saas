@@ -2,16 +2,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CurrencySelector } from '@/components/CurrencySelector';
 import { PaymentReminderGuide } from '@/components/PaymentReminderGuide';
-import { 
-  Bell, 
-  Calendar, 
-  Clock, 
-  PlusCircle, 
-  Search, 
-  Trash2, 
-  Edit2, 
-  Share2, 
-  DollarSign, 
+import {
+  Bell,
+  Calendar,
+  Clock,
+  PlusCircle,
+  Search,
+  Trash2,
+  Edit2,
+  Share2,
+  DollarSign,
   BarChart2,
   Moon,
   Sun,
@@ -29,43 +29,43 @@ import {
   Settings,
   MessageSquare
 } from 'lucide-react';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle, 
-  CardDescription, 
-  CardFooter 
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter
 } from '@/components/ui/card';
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
 } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription 
+  DialogDescription
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Slider } from '@/components/ui/slider';
 import { Toggle } from '@/components/ui/toggle';
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -76,356 +76,12 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getAnthropic } from '@/lib/ai';
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from '@/hooks/use-toast';
+import { Achievement, Payment, CashFlowPrediction, SavingRecommendation } from '@shared/types';
 
-// Define types
-interface Payment {
-  id: string;
-  title: string;
-  amount: number;
-  dueDate: Date;
-  category: Category;
-  notes?: string;
-  recurring?: boolean;
-  recurringPeriod?: 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'annually';
-  paymentLink?: string;
-  notificationSettings: NotificationSettings;
-  emotionalTone: 'gentle' | 'professional' | 'urgent';
-  shared: boolean;
-  sharedWith?: SharedUser[];
-  status: 'upcoming' | 'overdue' | 'paid';
-  lateFee?: number;
-  createdAt: Date;
-  paymentMethod?: string;
-}
 
-type Category = 
-  | 'utilities' 
-  | 'subscriptions' 
-  | 'loans' 
-  | 'rent' 
-  | 'mortgage' 
-  | 'insurance' 
-  | 'credit-card' 
-  | 'investments' 
-  | 'education' 
-  | 'healthcare' 
-  | 'other';
-
-interface NotificationSettings {
-  email: boolean;
-  sms: boolean;
-  push: boolean;
-  whatsapp: boolean;
-  timing: number[]; // Days before due date
-  sound: 'none' | 'gentle' | 'standard' | 'urgent';
-}
-
-interface SharedUser {
-  id: string;
-  name: string;
-  avatar: string;
-  email: string;
-}
-
-interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  unlocked: boolean;
-  progress?: number;
-  maxProgress?: number;
-  shown?: boolean;
-}
-
-interface CashFlowPrediction {
-  date: Date;
-  inflow: number;
-  outflow: number;
-  balance: number;
-}
-
-interface SavingRecommendation {
-  id: string;
-  title: string;
-  description: string;
-  potentialSavings: number;
-  difficulty: 'easy' | 'medium' | 'hard';
-  timePeriod: string;
-}
-
-// Dummy data
-const DUMMY_PAYMENTS: Payment[] = [
-  {
-    id: '1',
-    title: 'Rent Payment',
-    amount: 1200,
-    dueDate: new Date(new Date().setDate(new Date().getDate() + 5)),
-    category: 'rent',
-    notes: 'Monthly apartment rent',
-    recurring: true,
-    recurringPeriod: 'monthly',
-    paymentLink: 'https://pay.example.com/rent',
-    notificationSettings: {
-      email: true,
-      sms: true,
-      push: true,
-      whatsapp: false,
-      timing: [1, 3, 7],
-      sound: 'standard'
-    },
-    emotionalTone: 'professional',
-    shared: false,
-    status: 'upcoming',
-    createdAt: new Date(new Date().setDate(new Date().getDate() - 25)),
-    paymentMethod: 'Bank Transfer'
-  },
-  {
-    id: '2',
-    title: 'Netflix Subscription',
-    amount: 14.99,
-    dueDate: new Date(new Date().setDate(new Date().getDate() + 12)),
-    category: 'subscriptions',
-    recurring: true,
-    recurringPeriod: 'monthly',
-    paymentLink: 'https://netflix.com/billing',
-    notificationSettings: {
-      email: true,
-      sms: false,
-      push: true,
-      whatsapp: false,
-      timing: [1],
-      sound: 'gentle'
-    },
-    emotionalTone: 'gentle',
-    shared: true,
-    sharedWith: [
-      {
-        id: 'u1',
-        name: 'Alex Smith',
-        avatar: '',
-        email: 'alex@example.com'
-      }
-    ],
-    status: 'upcoming',
-    createdAt: new Date(new Date().setDate(new Date().getDate() - 15)),
-    paymentMethod: 'Credit Card'
-  },
-  {
-    id: '3',
-    title: 'Car Loan',
-    amount: 350,
-    dueDate: new Date(new Date().setDate(new Date().getDate() - 2)),
-    category: 'loans',
-    notes: 'Monthly car payment',
-    recurring: true,
-    recurringPeriod: 'monthly',
-    paymentLink: 'https://bank.example.com/loan',
-    notificationSettings: {
-      email: true,
-      sms: true,
-      push: true,
-      whatsapp: false,
-      timing: [1, 3, 5],
-      sound: 'urgent'
-    },
-    emotionalTone: 'urgent',
-    shared: false,
-    status: 'overdue',
-    lateFee: 25,
-    createdAt: new Date(new Date().setDate(new Date().getDate() - 32)),
-    paymentMethod: 'Bank Transfer'
-  },
-  {
-    id: '4',
-    title: 'Electricity Bill',
-    amount: 85.75,
-    dueDate: new Date(new Date().setDate(new Date().getDate() - 10)),
-    category: 'utilities',
-    recurring: true,
-    recurringPeriod: 'monthly',
-    paymentLink: 'https://utility.example.com/pay',
-    notificationSettings: {
-      email: true,
-      sms: false,
-      push: true,
-      whatsapp: false,
-      timing: [1, 7],
-      sound: 'standard'
-    },
-    emotionalTone: 'professional',
-    shared: false,
-    status: 'paid',
-    createdAt: new Date(new Date().setDate(new Date().getDate() - 40)),
-    paymentMethod: 'Credit Card'
-  },
-  {
-    id: '5',
-    title: 'Internet Service',
-    amount: 59.99,
-    dueDate: new Date(new Date().setDate(new Date().getDate() + 8)),
-    category: 'utilities',
-    recurring: true,
-    recurringPeriod: 'monthly',
-    paymentLink: 'https://isp.example.com/billing',
-    notificationSettings: {
-      email: true,
-      sms: false,
-      push: true,
-      whatsapp: false,
-      timing: [1, 3],
-      sound: 'gentle'
-    },
-    emotionalTone: 'professional',
-    shared: true,
-    sharedWith: [
-      {
-        id: 'u1',
-        name: 'Alex Smith',
-        avatar: '',
-        email: 'alex@example.com'
-      },
-      {
-        id: 'u2',
-        name: 'Jordan Lee',
-        avatar: '',
-        email: 'jordan@example.com'
-      }
-    ],
-    status: 'upcoming',
-    createdAt: new Date(new Date().setDate(new Date().getDate() - 22)),
-    paymentMethod: 'Direct Debit'
-  },
-  {
-    id: '6',
-    title: 'Health Insurance',
-    amount: 175.50,
-    dueDate: new Date(new Date().setDate(new Date().getDate() + 15)),
-    category: 'insurance',
-    recurring: true,
-    recurringPeriod: 'monthly',
-    paymentLink: 'https://insurance.example.com',
-    notificationSettings: {
-      email: true,
-      sms: false,
-      push: true,
-      whatsapp: false,
-      timing: [7],
-      sound: 'standard'
-    },
-    emotionalTone: 'professional',
-    shared: false,
-    status: 'upcoming',
-    createdAt: new Date(new Date().setDate(new Date().getDate() - 15)),
-    paymentMethod: 'Credit Card'
-  },
-  {
-    id: '7',
-    title: 'Phone Bill',
-    amount: 45.99,
-    dueDate: new Date(new Date().setDate(new Date().getDate() - 5)),
-    category: 'utilities',
-    recurring: true,
-    recurringPeriod: 'monthly',
-    paymentLink: 'https://mobile.example.com/pay',
-    notificationSettings: {
-      email: true,
-      sms: true,
-      push: true,
-      whatsapp: false,
-      timing: [1, 3],
-      sound: 'standard'
-    },
-    emotionalTone: 'professional',
-    shared: false,
-    status: 'paid',
-    createdAt: new Date(new Date().setDate(new Date().getDate() - 35)),
-    paymentMethod: 'Direct Debit'
-  }
-];
-
-const DUMMY_ACHIEVEMENTS: Achievement[] = [
-  {
-    id: 'a1',
-    title: 'Perfect Payer',
-    description: 'Pay 5 bills on time',
-    icon: <Award className="h-6 w-6 text-yellow-500" />,
-    unlocked: true,
-  },
-  {
-    id: 'a2',
-    title: 'Budget Master',
-    description: 'Set up 3 recurring payments',
-    icon: <Award className="h-6 w-6 text-blue-500" />,
-    unlocked: true,
-  },
-  {
-    id: 'a3',
-    title: 'Sharing is Caring',
-    description: 'Share a payment reminder with a friend',
-    icon: <Award className="h-6 w-6 text-green-500" />,
-    unlocked: true,
-  },
-  {
-    id: 'a4',
-    title: 'Early Bird',
-    description: 'Pay 10 bills before the due date',
-    icon: <Award className="h-6 w-6 text-purple-500" />,
-    unlocked: false,
-    progress: 8,
-    maxProgress: 10
-  },
-  {
-    id: 'a5',
-    title: 'Financial Wizard',
-    description: 'Use all features of the app',
-    icon: <Award className="h-6 w-6 text-indigo-500" />,
-    unlocked: false,
-    progress: 7,
-    maxProgress: 10
-  }
-];
-
-const DUMMY_CASH_FLOW: CashFlowPrediction[] = [
-  { date: new Date(new Date().setDate(new Date().getDate())), inflow: 0, outflow: 0, balance: 3500 },
-  { date: new Date(new Date().setDate(new Date().getDate() + 5)), inflow: 0, outflow: 1200, balance: 2300 },
-  { date: new Date(new Date().setDate(new Date().getDate() + 8)), inflow: 0, outflow: 59.99, balance: 2240.01 },
-  { date: new Date(new Date().setDate(new Date().getDate() + 12)), inflow: 0, outflow: 14.99, balance: 2225.02 },
-  { date: new Date(new Date().setDate(new Date().getDate() + 15)), inflow: 0, outflow: 175.5, balance: 2049.52 },
-  { date: new Date(new Date().setDate(new Date().getDate() + 20)), inflow: 3000, outflow: 0, balance: 5049.52 },
-  { date: new Date(new Date().setDate(new Date().getDate() + 30)), inflow: 0, outflow: 0, balance: 5049.52 }
-];
-
-const DUMMY_SAVINGS: SavingRecommendation[] = [
-  {
-    id: 's1',
-    title: 'Bundle your subscriptions',
-    description: 'Consider bundling Netflix with other streaming services to save on monthly costs.',
-    potentialSavings: 5.99,
-    difficulty: 'easy',
-    timePeriod: 'monthly'
-  },
-  {
-    id: 's2',
-    title: 'Negotiate your internet bill',
-    description: 'Call your ISP and ask about current promotions or discounts for loyal customers.',
-    potentialSavings: 15,
-    difficulty: 'medium',
-    timePeriod: 'monthly'
-  },
-  {
-    id: 's3',
-    title: 'Review your insurance coverage',
-    description: 'Shop around for health insurance plans to find better rates.',
-    potentialSavings: 25,
-    difficulty: 'hard',
-    timePeriod: 'monthly'
-  }
-];
-
-// Helper functions
+// Helper functions (unchanged from original)
 const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -531,10 +187,23 @@ const getToneEmoji = (tone: Payment['emotionalTone']): string => {
   }
 };
 
+type Category =
+  | 'utilities'
+  | 'subscriptions'
+  | 'loans'
+  | 'rent'
+  | 'mortgage'
+  | 'insurance'
+  | 'credit-card'
+  | 'investments'
+  | 'education'
+  | 'healthcare'
+  | 'other';
+
+
 const PaymentReminderSystem: React.FC = () => {
-  // State management
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [achievements, setAchievements] = useState<Achievement[]>([]); 
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [cashFlow, setCashFlow] = useState<CashFlowPrediction[]>([]);
   const [savingsRecommendations, setSavingsRecommendations] = useState<SavingRecommendation[]>([]);
   const [darkMode, setDarkMode] = useState<boolean>(false);
@@ -577,25 +246,82 @@ const PaymentReminderSystem: React.FC = () => {
   const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Effects
+  // Effects - using the improved localStorage handling from edited snippet
+  useEffect(() => {
+    try {
+      const savedPayments = localStorage.getItem('paymentReminder_payments');
+      const savedAchievements = localStorage.getItem('paymentReminder_achievements');
+      const savedSavingsRecommendations = localStorage.getItem('paymentReminder_savings');
+
+      if (savedPayments) {
+        const parsedPayments: Payment[] = JSON.parse(savedPayments).map((payment: any) => ({
+          ...payment,
+          dueDate: new Date(payment.dueDate),
+          createdAt: payment.createdAt ? new Date(payment.createdAt) : new Date()
+        }));
+        setPayments(parsedPayments);
+      }
+
+      if (savedAchievements) {
+        setAchievements(JSON.parse(savedAchievements));
+      }
+
+      if (savedSavingsRecommendations) {
+        setSavingsRecommendations(JSON.parse(savedSavingsRecommendations));
+      }
+
+    } catch (error) {
+      console.error('Error loading data from localStorage:', error);
+      setPayments([]);
+      setAchievements([]);
+      setSavingsRecommendations([]);
+    }
+  }, []);
+
+  // Save to localStorage whenever data changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('paymentReminder_payments', JSON.stringify(payments));
+    } catch (error) {
+      console.error('Error saving payments to localStorage:', error);
+    }
+  }, [payments]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('paymentReminder_achievements', JSON.stringify(achievements));
+    } catch (error) {
+      console.error('Error saving achievements to localStorage:', error);
+    }
+  }, [achievements]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('paymentReminder_savings', JSON.stringify(savingsRecommendations));
+    } catch (error) {
+      console.error('Error saving savings recommendations to localStorage:', error);
+    }
+  }, [savingsRecommendations]);
+
+
   useEffect(() => {
     // Scroll to bottom of AI chat
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [aiMessages, isAiTyping]);
 
-  // Check if a reminder is due soon
+  // Check if a reminder is due soon (unchanged from original)
   useEffect(() => {
     const checkReminders = () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       const upcomingPayments = payments.filter(payment => {
         const dueDate = new Date(payment.dueDate);
         dueDate.setHours(0, 0, 0, 0);
         const diffDays = getDaysUntilDue(dueDate);
         return payment.status === 'upcoming' && diffDays > 0 && diffDays <= 3;
       });
-      
+
       if (upcomingPayments.length > 0) {
         const payment = upcomingPayments[0];
         const daysUntil = getDaysUntilDue(payment.dueDate);
@@ -606,91 +332,17 @@ const PaymentReminderSystem: React.FC = () => {
         });
       }
     };
-    
+
     // Check reminders when component mounts
     checkReminders();
-    
+
     // Set up interval to check reminders every hour
     const interval = setInterval(checkReminders, 3600000);
-    
+
     return () => clearInterval(interval);
   }, [payments]);
 
-  // Load data from localStorage on initial render
-  useEffect(() => {
-    try {
-      // Load payments from localStorage
-      const savedPayments = localStorage.getItem('paymentReminder_payments');
-      const savedAchievements = localStorage.getItem('paymentReminder_achievements');
-      const savedSavingsRecommendations = localStorage.getItem('paymentReminder_savings');
-      
-      if (savedPayments) {
-        // Parse the saved payments and fix the date objects
-        const parsedPayments: Payment[] = JSON.parse(savedPayments).map((payment: any) => ({
-          ...payment,
-          dueDate: new Date(payment.dueDate),
-          createdAt: payment.createdAt ? new Date(payment.createdAt) : new Date()
-        }));
-        setPayments(parsedPayments);
-      } else {
-        // Initialize with empty array
-        setPayments([]);
-      }
-      
-      if (savedAchievements) {
-        setAchievements(JSON.parse(savedAchievements));
-      } else {
-        // Initialize with achievements from dummy data
-        setAchievements(DUMMY_ACHIEVEMENTS);
-      }
-      
-      if (savedSavingsRecommendations) {
-        setSavingsRecommendations(JSON.parse(savedSavingsRecommendations));
-      } else {
-        // Initialize with savings from dummy data
-        setSavingsRecommendations(DUMMY_SAVINGS);
-      }
-      
-      // Generate cash flow predictions
-      setCashFlow(DUMMY_CASH_FLOW);
-      
-    } catch (error) {
-      console.error('Error loading data from localStorage:', error);
-      // Initialize with empty arrays if there's an error
-      setPayments([]);
-      setAchievements(DUMMY_ACHIEVEMENTS);
-      setSavingsRecommendations(DUMMY_SAVINGS);
-    }
-  }, []);
-  
-  // Save payments to localStorage whenever they change
-  useEffect(() => {
-    try {
-      localStorage.setItem('paymentReminder_payments', JSON.stringify(payments));
-    } catch (error) {
-      console.error('Error saving payments to localStorage:', error);
-    }
-  }, [payments]);
-  
-  // Save achievements to localStorage whenever they change
-  useEffect(() => {
-    try {
-      localStorage.setItem('paymentReminder_achievements', JSON.stringify(achievements));
-    } catch (error) {
-      console.error('Error saving achievements to localStorage:', error);
-    }
-  }, [achievements]);
-  
-  // Save savings recommendations to localStorage whenever they change
-  useEffect(() => {
-    try {
-      localStorage.setItem('paymentReminder_savings', JSON.stringify(savingsRecommendations));
-    } catch (error) {
-      console.error('Error saving savings recommendations to localStorage:', error);
-    }
-  }, [savingsRecommendations]);
-  
-  // Detect online/offline status
+  // Detect online/offline status (unchanged from original)
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -704,7 +356,7 @@ const PaymentReminderSystem: React.FC = () => {
     };
   }, []);
 
-  // Show achievement when unlocked
+  // Show achievement when unlocked (unchanged from original)
   useEffect(() => {
     const unlockedAchievement = achievements.find(a => a.unlocked && !a.shown);
     if (unlockedAchievement) {
@@ -713,22 +365,22 @@ const PaymentReminderSystem: React.FC = () => {
         description: `${unlockedAchievement.title}: ${unlockedAchievement.description}`,
         duration: 5000,
       });
-      
-      setAchievements(prev => 
-        prev.map(a => 
+
+      setAchievements(prev =>
+        prev.map(a =>
           a.id === unlockedAchievement.id ? { ...a, shown: true } : a
         )
       );
     }
   }, [achievements]);
 
-  // Check for new achievements
+  // Check for new achievements (unchanged from original)
   useEffect(() => {
     const paidOnTime = payments.filter(p => p.status === 'paid').length;
     const recurringPayments = payments.filter(p => p.recurring).length;
     const sharedPayments = payments.filter(p => p.shared).length;
-    
-    setAchievements(prev => 
+
+    setAchievements(prev =>
       prev.map(a => {
         if (a.id === 'a4' && !a.unlocked) {
           return { ...a, progress: paidOnTime, unlocked: paidOnTime >= 10 };
@@ -738,23 +390,23 @@ const PaymentReminderSystem: React.FC = () => {
     );
   }, [payments]);
 
-  // Handle send message to AI
+  // Handle send message to AI (unchanged from original)
   const handleAiSend = async () => {
     if (!aiInput.trim()) return;
-    
+
     const userMessage = { id: Date.now().toString(), text: aiInput, isUser: true };
     setAIMessages(prev => [...prev, userMessage]);
     setAiInput('');
     setIsAiTyping(true);
-    
+
     try {
       // Function to generate a response based on user input
       const generateResponse = async (input: string) => {
         // In a real app, this would call the Anthropic API
         // For now, we're simulating responses
-        
+
         const lowercaseInput = input.toLowerCase();
-        
+
         if (lowercaseInput.includes('overdue') || lowercaseInput.includes('late')) {
           const overduePayments = payments.filter(p => p.status === 'overdue');
           if (overduePayments.length > 0) {
@@ -763,7 +415,7 @@ const PaymentReminderSystem: React.FC = () => {
             return "Good news! You don't have any overdue payments at the moment.";
           }
         }
-        
+
         if (lowercaseInput.includes('upcoming') || lowercaseInput.includes('next')) {
           const upcomingPayments = payments.filter(p => p.status === 'upcoming').sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
           if (upcomingPayments.length > 0) {
@@ -772,35 +424,35 @@ const PaymentReminderSystem: React.FC = () => {
             return "You don't have any upcoming payments scheduled. Would you like to add a new payment reminder?";
           }
         }
-        
+
         if (lowercaseInput.includes('total') || lowercaseInput.includes('spend')) {
           const totalAmount = payments.reduce((sum, payment) => sum + payment.amount, 0);
           return `Your total scheduled payments amount to ${formatCurrency(totalAmount)}. The largest payment is for ${formatCurrency(Math.max(...payments.map(p => p.amount)))}.`;
         }
-        
+
         if (lowercaseInput.includes('save') || lowercaseInput.includes('saving')) {
           return `Based on your payment history, I've identified a few potential savings opportunities. For example, you might save ${formatCurrency(savingsRecommendations[0].potentialSavings)} ${savingsRecommendations[0].timePeriod} by ${savingsRecommendations[0].description.toLowerCase()}. Would you like more savings tips?`;
         }
-        
+
         if (lowercaseInput.includes('add') || lowercaseInput.includes('new')) {
           setIsAddPaymentOpen(true);
           return "I've opened the form to add a new payment reminder for you. Just fill in the details and I'll help you keep track of it.";
         }
-        
+
         // Default response
         return "I'm here to help you manage your payments and reminders. You can ask me about upcoming payments, overdue bills, how to save money, or I can help you add new payment reminders.";
       };
-      
+
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       const response = await generateResponse(aiInput);
       const aiResponse = { id: Date.now().toString(), text: response, isUser: false };
       setAIMessages(prev => [...prev, aiResponse]);
     } catch (error) {
       console.error('Error generating AI response:', error);
       setAIMessages(prev => [
-        ...prev, 
+        ...prev,
         { id: Date.now().toString(), text: "Sorry, I encountered an error. Please try again later.", isUser: false }
       ]);
     } finally {
@@ -808,12 +460,12 @@ const PaymentReminderSystem: React.FC = () => {
     }
   };
 
-  // Handle filter change
+  // Handle filter change (unchanged from original)
   const handleFilterChange = (value: string) => {
     setFilter(value as 'all' | 'upcoming' | 'overdue' | 'paid');
   };
 
-  // Handle sort change
+  // Handle sort change (unchanged from original)
   const handleSortChange = (value: string) => {
     if (value === sortBy) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -823,7 +475,7 @@ const PaymentReminderSystem: React.FC = () => {
     }
   };
 
-  // Filter and sort payments
+  // Filter and sort payments (unchanged from original)
   const filteredPayments = payments
     .filter(payment => {
       if (filter !== 'all' && payment.status !== filter) return false;
@@ -839,12 +491,12 @@ const PaymentReminderSystem: React.FC = () => {
     })
     .sort((a, b) => {
       if (sortBy === 'dueDate') {
-        return sortOrder === 'asc' 
+        return sortOrder === 'asc'
           ? a.dueDate.getTime() - b.dueDate.getTime()
           : b.dueDate.getTime() - a.dueDate.getTime();
       } else if (sortBy === 'amount') {
-        return sortOrder === 'asc' 
-          ? a.amount - b.amount 
+        return sortOrder === 'asc'
+          ? a.amount - b.amount
           : b.amount - a.amount;
       } else {
         return sortOrder === 'asc'
@@ -853,15 +505,13 @@ const PaymentReminderSystem: React.FC = () => {
       }
     });
 
-  // Clear all payment reminder data
+  // Clear all payment reminder data (modified to remove dummy data reinitialization)
   const handleClearAllData = () => {
-    // Show confirmation dialog
     if (confirm("Are you sure you want to clear all payment reminder data? This action cannot be undone.")) {
-      // Clear data
       setPayments([]);
-      setAchievements(DUMMY_ACHIEVEMENTS.map(a => ({ ...a, unlocked: false, shown: false })));
-      
-      // Clear localStorage
+      setAchievements([]);
+      setSavingsRecommendations([]);
+
       try {
         localStorage.removeItem('paymentReminder_payments');
         localStorage.removeItem('paymentReminder_achievements');
@@ -869,15 +519,15 @@ const PaymentReminderSystem: React.FC = () => {
       } catch (error) {
         console.error("Error clearing localStorage:", error);
       }
-      
+
       toast({
         title: "All Data Cleared",
         description: "All your payment reminder data has been successfully cleared.",
       });
     }
   };
-  
-  // Payment handlers
+
+  // Payment handlers (unchanged from original)
   const handleAddPayment = () => {
     const id = Date.now().toString();
     const newPaymentData: Payment = {
@@ -905,7 +555,7 @@ const PaymentReminderSystem: React.FC = () => {
       createdAt: new Date(),
       paymentMethod: newPayment.paymentMethod
     };
-    
+
     setPayments(prev => [...prev, newPaymentData]);
     setNewPayment({
       title: '',
@@ -925,7 +575,7 @@ const PaymentReminderSystem: React.FC = () => {
       shared: false
     });
     setIsAddPaymentOpen(false);
-    
+
     toast({
       title: '✅ Payment Reminder Added',
       description: `${newPaymentData.title} has been added to your reminders.`,
@@ -934,16 +584,16 @@ const PaymentReminderSystem: React.FC = () => {
 
   const handleEditPayment = () => {
     if (!editingPayment) return;
-    
-    setPayments(prev => 
-      prev.map(p => 
+
+    setPayments(prev =>
+      prev.map(p =>
         p.id === editingPayment.id ? editingPayment : p
       )
     );
-    
+
     setEditingPayment(null);
     setIsEditPaymentOpen(false);
-    
+
     toast({
       title: '✅ Payment Reminder Updated',
       description: `${editingPayment.title} has been updated.`,
@@ -952,7 +602,7 @@ const PaymentReminderSystem: React.FC = () => {
 
   const handleDeletePayment = (id: string) => {
     setPayments(prev => prev.filter(p => p.id !== id));
-    
+
     toast({
       title: '🗑️ Payment Reminder Deleted',
       description: 'The payment reminder has been removed.',
@@ -960,51 +610,44 @@ const PaymentReminderSystem: React.FC = () => {
   };
 
   const handleMarkAsPaid = (id: string) => {
-    // Find the payment before updating the state
     const payment = payments.find(p => p.id === id);
     if (!payment) return;
-    
-    // Update payment status to paid
-    setPayments(prev => 
-      prev.map(p => 
-        p.id === id 
-          ? { ...p, status: 'paid' } 
+
+    setPayments(prev =>
+      prev.map(p =>
+        p.id === id
+          ? { ...p, status: 'paid' }
           : p
       )
     );
-    
-    // Get a random savings recommendation to show
+
     const randomTip = savingsRecommendations[Math.floor(Math.random() * savingsRecommendations.length)];
     setCurrentSavingsTip(randomTip);
     setIsSavingsDialogOpen(true);
-    
-    // Show success toast
+
     toast({
       title: '💰 Payment Marked as Paid',
       description: `${payment.title} has been marked as paid.`,
     });
-    
-    // Update achievements - unlock "On Time Payer" if applicable
+
     const newAchievements = [...achievements];
     const onTimePayer = newAchievements.find(a => a.id === 'on-time-payer');
     if (onTimePayer && !onTimePayer.unlocked && !payment.status.includes('overdue')) {
       onTimePayer.progress = (onTimePayer.progress || 0) + 1;
-      
+
       if (onTimePayer.progress >= (onTimePayer.maxProgress || 5)) {
         onTimePayer.unlocked = true;
-        
-        // Show achievement unlocked toast
+
         toast({
           title: '🏆 Achievement Unlocked!',
           description: 'On Time Payer: You\'ve paid 5 bills on time!',
           variant: 'default',
         });
       }
-      
+
       setAchievements(newAchievements);
     }
-    
-    // If this was the last unpaid bill, show a celebration message
+
     const unpaidRemaining = payments.filter(p => p.id !== id && p.status !== 'paid').length;
     if (unpaidRemaining === 0) {
       setTimeout(() => {
@@ -1019,31 +662,30 @@ const PaymentReminderSystem: React.FC = () => {
 
   const handleSharePayment = () => {
     if (!sharingPayment) return;
-    
-    // In a real app, this would send invitations to the shared users
-    setPayments(prev => 
-      prev.map(p => 
-        p.id === sharingPayment.id 
-          ? { ...p, shared: true, sharedWith: sharingPayment.sharedWith } 
+
+    setPayments(prev =>
+      prev.map(p =>
+        p.id === sharingPayment.id
+          ? { ...p, shared: true, sharedWith: sharingPayment.sharedWith }
           : p
       )
     );
-    
+
     setSharingPayment(null);
     setIsShareDialogOpen(false);
-    
+
     toast({
       title: '🔗 Payment Shared',
       description: `${sharingPayment.title} has been shared successfully.`,
     });
   };
 
-  // Render payment card
+  // Render payment card (unchanged from original)
   const renderPaymentCard = (payment: Payment) => {
     const daysUntil = getDaysUntilDue(payment.dueDate);
     const isOverdue = payment.status === 'overdue';
     const isPaid = payment.status === 'paid';
-    
+
     return (
       <motion.div
         key={payment.id}
@@ -1054,14 +696,14 @@ const PaymentReminderSystem: React.FC = () => {
         className="group relative"
       >
         <Card className={`mb-4 overflow-hidden transition-all duration-300 hover:shadow-md ${
-          isOverdue ? 'border-red-300 dark:border-red-800' : 
-          isPaid ? 'border-green-300 dark:border-green-800' : 
-          'border-blue-200 dark:border-blue-900'
+          isOverdue ? 'border-red-300 dark:border-red-800' :
+            isPaid ? 'border-green-300 dark:border-green-800' :
+            'border-blue-200 dark:border-blue-900'
         }`}>
           <div className={`absolute top-0 right-0 h-2 w-full ${
-            isOverdue ? 'bg-red-500' : 
-            isPaid ? 'bg-green-500' : 
-            'bg-blue-500'
+            isOverdue ? 'bg-red-500' :
+              isPaid ? 'bg-green-500' :
+                'bg-blue-500'
           }`} />
           <CardContent className="pt-6">
             <div className="flex items-start justify-between">
@@ -1099,8 +741,8 @@ const PaymentReminderSystem: React.FC = () => {
                 <div className="text-sm text-muted-foreground">Due {formatDate(payment.dueDate)}</div>
                 {!isPaid && (
                   <div className={`text-sm mt-1 ${isOverdue ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>
-                    {isOverdue 
-                      ? `Overdue by ${Math.abs(daysUntil)} day${Math.abs(daysUntil) !== 1 ? 's' : ''}` 
+                    {isOverdue
+                      ? `Overdue by ${Math.abs(daysUntil)} day${Math.abs(daysUntil) !== 1 ? 's' : ''}`
                       : `${daysUntil} day${daysUntil !== 1 ? 's' : ''} until due`}
                   </div>
                 )}
@@ -1111,7 +753,7 @@ const PaymentReminderSystem: React.FC = () => {
                 )}
               </div>
             </div>
-            
+
             <div className="flex items-center justify-between mt-4">
               <div className="flex items-center text-sm text-muted-foreground">
                 <span className="mr-2">{getToneEmoji(payment.emotionalTone)}</span>
@@ -1119,8 +761,8 @@ const PaymentReminderSystem: React.FC = () => {
               </div>
               <div className="space-x-2">
                 {!isPaid && (
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="outline"
                     onClick={() => handleMarkAsPaid(payment.id)}
                     className="transition-all hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-900 dark:hover:text-green-300"
@@ -1157,7 +799,7 @@ const PaymentReminderSystem: React.FC = () => {
                       Share
                     </DropdownMenuItem>
                     {payment.paymentLink && (
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => window.open(payment.paymentLink, '_blank')}
                       >
                         <DollarSign className="h-4 w-4 mr-2" />
@@ -1165,7 +807,7 @@ const PaymentReminderSystem: React.FC = () => {
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       className="text-red-600 dark:text-red-400"
                       onClick={() => handleDeletePayment(payment.id)}
                     >
@@ -1209,7 +851,7 @@ const PaymentReminderSystem: React.FC = () => {
               >
                 {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </Button>
-              
+
               <Badge variant={isOnline ? "default" : "destructive"} className="hidden sm:flex">
                 {isOnline ? (
                   <Wifi className="h-3 w-3 mr-1" />
@@ -1218,9 +860,9 @@ const PaymentReminderSystem: React.FC = () => {
                 )}
                 {isOnline ? "Online" : "Offline"}
               </Badge>
-              
-              <Button 
-                variant="default" 
+
+              <Button
+                variant="default"
                 size="sm"
                 className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700"
                 onClick={() => setIsAddPaymentOpen(true)}
@@ -1232,7 +874,7 @@ const PaymentReminderSystem: React.FC = () => {
           </div>
         </div>
       </header>
-      
+
       {/* Main */}
       <main className="container max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-8 text-center">
@@ -1243,7 +885,7 @@ const PaymentReminderSystem: React.FC = () => {
             Never miss a payment again. Set up reminders, get smart notifications, and stay on top of your finances with AI assistance.
           </p>
         </div>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
@@ -1252,7 +894,7 @@ const PaymentReminderSystem: React.FC = () => {
                 <div className="flex justify-between items-center">
                   <CardTitle>Your Payment Reminders</CardTitle>
                   <div className="flex items-center space-x-2">
-                    <Button 
+                    <Button
                       variant="destructive"
                       size="sm"
                       onClick={handleClearAllData}
@@ -1325,10 +967,10 @@ const PaymentReminderSystem: React.FC = () => {
                       </div>
                       <h3 className="text-lg font-medium">No payments found</h3>
                       <p className="text-gray-500 dark:text-gray-400 mt-1">
-                        {searchQuery 
+                        {searchQuery
                           ? `No results for "${searchQuery}"`
-                          : filter !== 'all' 
-                            ? `No ${filter} payments found` 
+                          : filter !== 'all'
+                            ? `No ${filter} payments found`
                             : 'Add your first payment reminder'}
                       </p>
                       <Button
@@ -1343,10 +985,10 @@ const PaymentReminderSystem: React.FC = () => {
                         }}
                         className="mt-4"
                       >
-                        {searchQuery 
-                          ? 'Clear search' 
-                          : filter !== 'all' 
-                            ? 'Show all payments' 
+                        {searchQuery
+                          ? 'Clear search'
+                          : filter !== 'all'
+                            ? 'Show all payments'
                             : 'Add a payment reminder'}
                       </Button>
                     </motion.div>
@@ -1354,7 +996,7 @@ const PaymentReminderSystem: React.FC = () => {
                 </AnimatePresence>
               </CardContent>
             </Card>
-            
+
             {/* Cash Flow Forecast */}
             <Card>
               <CardHeader>
@@ -1368,7 +1010,7 @@ const PaymentReminderSystem: React.FC = () => {
                   {cashFlow.map((prediction, index) => {
                     const isToday = index === 0;
                     const hasChange = prediction.inflow > 0 || prediction.outflow > 0;
-                    
+
                     return (
                       <div key={index} className="flex items-center space-x-4">
                         <div className="w-24 text-sm">
@@ -1402,9 +1044,9 @@ const PaymentReminderSystem: React.FC = () => {
                               {formatCurrency(prediction.balance)}
                             </div>
                           </div>
-                          <Progress 
-                            value={(prediction.balance / Math.max(...cashFlow.map(cf => cf.balance))) * 100} 
-                            className="h-2" 
+                          <Progress
+                            value={(prediction.balance / Math.max(...cashFlow.map(cf => cf.balance))) * 100}
+                            className="h-2"
                           />
                         </div>
                       </div>
@@ -1414,12 +1056,12 @@ const PaymentReminderSystem: React.FC = () => {
               </CardContent>
             </Card>
           </div>
-          
+
           {/* Sidebar */}
           <div className="space-y-6">
             {/* User Guide */}
             <PaymentReminderGuide />
-            
+
             {/* AI Assistant */}
             <Card className="overflow-hidden border-blue-200 dark:border-blue-900">
               <div className="bg-gradient-to-r from-sky-500 to-blue-600 p-4">
@@ -1434,14 +1076,14 @@ const PaymentReminderSystem: React.FC = () => {
                 </div>
               </div>
               <CardContent className="p-4">
-                <Button 
-                  onClick={() => setIsAIAssistantOpen(true)} 
+                <Button
+                  onClick={() => setIsAIAssistantOpen(true)}
                   className="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700"
                 >
                   <MessageCircle className="h-4 w-4 mr-2" />
                   Chat with Finance Buddy
                 </Button>
-                
+
                 <div className="mt-4 pt-4 border-t">
                   <h4 className="font-medium mb-2">Quick Actions</h4>
                   <div className="grid grid-cols-2 gap-2">
@@ -1465,7 +1107,7 @@ const PaymentReminderSystem: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
-            
+
             {/* Statistics Summary */}
             <Card>
               <CardHeader>
@@ -1483,7 +1125,7 @@ const PaymentReminderSystem: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div className="text-sm text-muted-foreground">Total Overdue</div>
                     <div className="font-medium text-red-600 dark:text-red-400">
@@ -1494,14 +1136,14 @@ const PaymentReminderSystem: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div className="text-sm text-muted-foreground">Paid This Month</div>
                     <div className="font-medium text-green-600 dark:text-green-400">
                       {formatCurrency(
                         payments
-                          .filter(p => 
-                            p.status === 'paid' && 
+                          .filter(p =>
+                            p.status === 'paid' &&
                             p.dueDate.getMonth() === new Date().getMonth() &&
                             p.dueDate.getFullYear() === new Date().getFullYear()
                           )
@@ -1509,7 +1151,7 @@ const PaymentReminderSystem: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div className="text-sm text-muted-foreground">Next Due</div>
                     <div className="font-medium">
@@ -1517,7 +1159,7 @@ const PaymentReminderSystem: React.FC = () => {
                         const upcoming = payments
                           .filter(p => p.status === 'upcoming')
                           .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
-                          
+
                         if (upcoming.length > 0) {
                           return formatDate(upcoming[0].dueDate);
                         }
@@ -1525,19 +1167,19 @@ const PaymentReminderSystem: React.FC = () => {
                       })()}
                     </div>
                   </div>
-                  
+
                   <div className="pt-2">
                     <h4 className="text-sm font-medium mb-2">Categories Breakdown</h4>
                     {(() => {
                       const categories: Record<Category, number> = {} as Record<Category, number>;
-                      
+
                       payments.forEach(p => {
                         if (!categories[p.category]) categories[p.category] = 0;
                         categories[p.category] += p.amount;
                       });
-                      
+
                       const totalAmount = Object.values(categories).reduce((sum, amount) => sum + amount, 0);
-                      
+
                       return Object.entries(categories)
                         .sort(([, a], [, b]) => b - a)
                         .slice(0, 3)
@@ -1558,7 +1200,7 @@ const PaymentReminderSystem: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
-            
+
             {/* Achievements */}
             <Card>
               <CardHeader>
@@ -1567,12 +1209,12 @@ const PaymentReminderSystem: React.FC = () => {
               <CardContent>
                 <div className="space-y-3">
                   {achievements.slice(0, 3).map(achievement => (
-                    <motion.div 
+                    <motion.div
                       key={achievement.id}
                       whileHover={{ scale: 1.02 }}
                       className={`p-3 rounded-lg border ${
-                        achievement.unlocked 
-                          ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' 
+                        achievement.unlocked
+                          ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
                           : 'bg-gray-50 border-gray-200 dark:bg-gray-800/50 dark:border-gray-700'
                       }`}
                       onClick={() => {
@@ -1582,8 +1224,8 @@ const PaymentReminderSystem: React.FC = () => {
                     >
                       <div className="flex items-center space-x-3">
                         <div className={`p-2 rounded-full ${
-                          achievement.unlocked 
-                            ? 'bg-green-100 dark:bg-green-800' 
+                          achievement.unlocked
+                            ? 'bg-green-100 dark:bg-green-800'
                             : 'bg-gray-100 dark:bg-gray-700'
                         }`}>
                           {achievement.icon}
@@ -1603,10 +1245,10 @@ const PaymentReminderSystem: React.FC = () => {
                       </div>
                     </motion.div>
                   ))}
-                  
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="w-full mt-2"
                     onClick={() => setIsAchievementDialogOpen(true)}
                   >
@@ -1619,9 +1261,9 @@ const PaymentReminderSystem: React.FC = () => {
           </div>
         </div>
       </main>
-      
+
       {/* Dialogs/Modals */}
-      
+
       {/* Add Payment Dialog */}
       <Dialog open={isAddPaymentOpen} onOpenChange={setIsAddPaymentOpen}>
         <DialogContent className="sm:max-w-[600px]">
@@ -1631,57 +1273,57 @@ const PaymentReminderSystem: React.FC = () => {
               Create a new payment reminder. Fill in the details below.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Payment Title</Label>
-                <Input 
-                  id="title" 
-                  placeholder="e.g. Monthly Rent" 
+                <Input
+                  id="title"
+                  placeholder="e.g. Monthly Rent"
                   value={newPayment.title}
-                  onChange={(e) => setNewPayment({...newPayment, title: e.target.value})}
+                  onChange={(e) => setNewPayment({ ...newPayment, title: e.target.value })}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="amount">Amount</Label>
                 <div className="relative">
                   <DollarSign className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input 
-                    id="amount" 
-                    type="number" 
-                    placeholder="0.00" 
+                  <Input
+                    id="amount"
+                    type="number"
+                    placeholder="0.00"
                     className="pl-8"
                     value={newPayment.amount || ''}
-                    onChange={(e) => setNewPayment({...newPayment, amount: parseFloat(e.target.value) || 0})}
+                    onChange={(e) => setNewPayment({ ...newPayment, amount: parseFloat(e.target.value) || 0 })}
                   />
                 </div>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="dueDate">Due Date</Label>
-                <Input 
-                  id="dueDate" 
+                <Input
+                  id="dueDate"
                   type="date"
-                  value={newPayment.dueDate 
-                    ? newPayment.dueDate.toISOString().split('T')[0] 
+                  value={newPayment.dueDate
+                    ? newPayment.dueDate.toISOString().split('T')[0]
                     : new Date().toISOString().split('T')[0]
                   }
                   onChange={(e) => setNewPayment({
-                    ...newPayment, 
+                    ...newPayment,
                     dueDate: new Date(e.target.value)
                   })}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
-                <Select 
+                <Select
                   onValueChange={(value) => setNewPayment({
-                    ...newPayment, 
+                    ...newPayment,
                     category: value as Category
                   })}
                 >
@@ -1704,41 +1346,41 @@ const PaymentReminderSystem: React.FC = () => {
                 </Select>
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="notes">Notes (Optional)</Label>
-              <Input 
-                id="notes" 
-                placeholder="Add any additional details" 
+              <Input
+                id="notes"
+                placeholder="Add any additional details"
                 value={newPayment.notes || ''}
-                onChange={(e) => setNewPayment({...newPayment, notes: e.target.value})}
+                onChange={(e) => setNewPayment({ ...newPayment, notes: e.target.value })}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="paymentLink">Payment Link (Optional)</Label>
-              <Input 
-                id="paymentLink" 
-                placeholder="https://..." 
+              <Input
+                id="paymentLink"
+                placeholder="https://..."
                 value={newPayment.paymentLink || ''}
-                onChange={(e) => setNewPayment({...newPayment, paymentLink: e.target.value})}
+                onChange={(e) => setNewPayment({ ...newPayment, paymentLink: e.target.value })}
               />
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <Label htmlFor="recurring" className="flex items-center space-x-2 cursor-pointer">
-                <Switch 
-                  id="recurring" 
+                <Switch
+                  id="recurring"
                   checked={newPayment.recurring || false}
-                  onCheckedChange={(checked) => setNewPayment({...newPayment, recurring: checked})}
+                  onCheckedChange={(checked) => setNewPayment({ ...newPayment, recurring: checked })}
                 />
                 <span>Recurring Payment</span>
               </Label>
-              
+
               {newPayment.recurring && (
-                <Select 
+                <Select
                   onValueChange={(value) => setNewPayment({
-                    ...newPayment, 
+                    ...newPayment,
                     recurringPeriod: value as Payment['recurringPeriod']
                   })}
                 >
@@ -1755,16 +1397,16 @@ const PaymentReminderSystem: React.FC = () => {
                 </Select>
               )}
             </div>
-            
+
             <div>
               <Label className="mb-2 block">Notification Settings</Label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="flex items-center space-x-2">
-                  <Switch 
+                  <Switch
                     id="email-notify"
                     checked={newPayment.notificationSettings?.email || false}
                     onCheckedChange={(checked) => setNewPayment({
-                      ...newPayment, 
+                      ...newPayment,
                       notificationSettings: {
                         email: checked,
                         sms: newPayment.notificationSettings?.sms ?? false,
@@ -1777,13 +1419,13 @@ const PaymentReminderSystem: React.FC = () => {
                   />
                   <Label htmlFor="email-notify">Email</Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Switch 
+                  <Switch
                     id="sms-notify"
                     checked={newPayment.notificationSettings?.sms || false}
                     onCheckedChange={(checked) => setNewPayment({
-                      ...newPayment, 
+                      ...newPayment,
                       notificationSettings: {
                         email: newPayment.notificationSettings?.email ?? true,
                         sms: checked,
@@ -1796,13 +1438,13 @@ const PaymentReminderSystem: React.FC = () => {
                   />
                   <Label htmlFor="sms-notify">SMS</Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Switch 
+                  <Switch
                     id="push-notify"
                     checked={newPayment.notificationSettings?.push || false}
                     onCheckedChange={(checked) => setNewPayment({
-                      ...newPayment, 
+                      ...newPayment,
                       notificationSettings: {
                         email: newPayment.notificationSettings?.email ?? true,
                         sms: newPayment.notificationSettings?.sms ?? false,
@@ -1815,19 +1457,19 @@ const PaymentReminderSystem: React.FC = () => {
                   />
                   <Label htmlFor="push-notify">Push</Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <Switch 
+                  <Switch
                     id="whatsapp-notify"
                     checked={newPayment.notificationSettings?.whatsapp || false}
                     onCheckedChange={(checked) => setNewPayment({
-                      ...newPayment, 
+                      ...newPayment,
                       notificationSettings: {
                         email: newPayment.notificationSettings?.email ?? true,
                         sms: newPayment.notificationSettings?.sms ?? false,
                         push: newPayment.notificationSettings?.push ?? true,
                         whatsapp: checked,
-                        timing: newPayment.notificationSettings?.timing ?? [1, 3],
+                        timing: newtiming: newPayment.notificationSettings?.timing ?? [1, 3],
                         sound: newPayment.notificationSettings?.sound ?? 'standard'
                       }
                     })}
@@ -1836,45 +1478,45 @@ const PaymentReminderSystem: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div>
               <Label className="mb-2 block">Emotional Tone</Label>
               <ToggleGroup type="single" className="justify-start">
-                <ToggleGroupItem 
-                  value="gentle" 
+                <ToggleGroupItem
+                  value="gentle"
                   aria-label="Gentle reminder tone"
                   className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-900 dark:data-[state=on]:bg-blue-900 dark:data-[state=on]:text-blue-100"
-                  onClick={() => setNewPayment({...newPayment, emotionalTone: 'gentle'})}
+                  onClick={() => setNewPayment({ ...newPayment, emotionalTone: 'gentle' })}
                 >
                   <span className="mr-1">😊</span> Gentle
                 </ToggleGroupItem>
-                <ToggleGroupItem 
-                  value="professional" 
+                <ToggleGroupItem
+                  value="professional"
                   aria-label="Professional reminder tone"
                   className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-900 dark:data-[state=on]:bg-blue-900 dark:data-[state=on]:text-blue-100"
-                  onClick={() => setNewPayment({...newPayment, emotionalTone: 'professional'})}
+                  onClick={() => setNewPayment({ ...newPayment, emotionalTone: 'professional' })}
                 >
                   <span className="mr-1">🤝</span> Professional
                 </ToggleGroupItem>
-                <ToggleGroupItem 
-                  value="urgent" 
+                <ToggleGroupItem
+                  value="urgent"
                   aria-label="Urgent reminder tone"
                   className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-900 dark:data-[state=on]:bg-blue-900 dark:data-[state=on]:text-blue-100"
-                  onClick={() => setNewPayment({...newPayment, emotionalTone: 'urgent'})}
+                  onClick={() => setNewPayment({ ...newPayment, emotionalTone: 'urgent' })}
                 >
                   <span className="mr-1">⚠️</span> Urgent
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddPaymentOpen(false)}>Cancel</Button>
             <Button onClick={handleAddPayment}>Create Reminder</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Edit Payment Dialog */}
       <Dialog open={isEditPaymentOpen} onOpenChange={setIsEditPaymentOpen}>
         <DialogContent className="sm:max-w-[600px]">
@@ -1884,54 +1526,54 @@ const PaymentReminderSystem: React.FC = () => {
               Update your payment reminder details.
             </DialogDescription>
           </DialogHeader>
-          
+
           {editingPayment && (
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-title">Payment Title</Label>
-                  <Input 
-                    id="edit-title" 
+                  <Input
+                    id="edit-title"
                     value={editingPayment.title}
-                    onChange={(e) => setEditingPayment({...editingPayment, title: e.target.value})}
+                    onChange={(e) => setEditingPayment({ ...editingPayment, title: e.target.value })}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="edit-amount">Amount</Label>
                   <div className="relative">
                     <DollarSign className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input 
-                      id="edit-amount" 
-                      type="number" 
+                    <Input
+                      id="edit-amount"
+                      type="number"
                       className="pl-8"
                       value={editingPayment.amount}
-                      onChange={(e) => setEditingPayment({...editingPayment, amount: parseFloat(e.target.value) || 0})}
+                      onChange={(e) => setEditingPayment({ ...editingPayment, amount: parseFloat(e.target.value) || 0 })}
                     />
                   </div>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-dueDate">Due Date</Label>
-                  <Input 
-                    id="edit-dueDate" 
+                  <Input
+                    id="edit-dueDate"
                     type="date"
                     value={editingPayment.dueDate.toISOString().split('T')[0]}
                     onChange={(e) => setEditingPayment({
-                      ...editingPayment, 
+                      ...editingPayment,
                       dueDate: new Date(e.target.value)
                     })}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="edit-category">Category</Label>
-                  <Select 
+                  <Select
                     defaultValue={editingPayment.category}
                     onValueChange={(value) => setEditingPayment({
-                      ...editingPayment, 
+                      ...editingPayment,
                       category: value as Category
                     })}
                   >
@@ -1954,40 +1596,40 @@ const PaymentReminderSystem: React.FC = () => {
                   </Select>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="edit-notes">Notes (Optional)</Label>
-                <Input 
-                  id="edit-notes" 
+                <Input
+                  id="edit-notes"
                   value={editingPayment.notes || ''}
-                  onChange={(e) => setEditingPayment({...editingPayment, notes: e.target.value})}
+                  onChange={(e) => setEditingPayment({ ...editingPayment, notes: e.target.value })}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="edit-paymentLink">Payment Link (Optional)</Label>
-                <Input 
-                  id="edit-paymentLink" 
+                <Input
+                  id="edit-paymentLink"
                   value={editingPayment.paymentLink || ''}
-                  onChange={(e) => setEditingPayment({...editingPayment, paymentLink: e.target.value})}
+                  onChange={(e) => setEditingPayment({ ...editingPayment, paymentLink: e.target.value })}
                 />
               </div>
-              
+
               <div className="flex items-center space-x-2">
                 <Label htmlFor="edit-recurring" className="flex items-center space-x-2 cursor-pointer">
-                  <Switch 
-                    id="edit-recurring" 
+                  <Switch
+                    id="edit-recurring"
                     checked={editingPayment.recurring || false}
-                    onCheckedChange={(checked) => setEditingPayment({...editingPayment, recurring: checked})}
+                    onCheckedChange={(checked) => setEditingPayment({ ...editingPayment, recurring: checked })}
                   />
                   <span>Recurring Payment</span>
                 </Label>
-                
+
                 {editingPayment.recurring && (
-                  <Select 
+                  <Select
                     defaultValue={editingPayment.recurringPeriod}
                     onValueChange={(value) => setEditingPayment({
-                      ...editingPayment, 
+                      ...editingPayment,
                       recurringPeriod: value as Payment['recurringPeriod']
                     })}
                   >
@@ -2004,16 +1646,16 @@ const PaymentReminderSystem: React.FC = () => {
                   </Select>
                 )}
               </div>
-              
+
               <div>
                 <Label className="mb-2 block">Notification Settings</Label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <div className="flex items-center space-x-2">
-                    <Switch 
+                    <Switch
                       id="edit-email-notify"
                       checked={editingPayment.notificationSettings?.email || false}
                       onCheckedChange={(checked) => setEditingPayment({
-                        ...editingPayment, 
+                        ...editingPayment,
                         notificationSettings: {
                           ...editingPayment.notificationSettings,
                           email: checked
@@ -2022,13 +1664,13 @@ const PaymentReminderSystem: React.FC = () => {
                     />
                     <Label htmlFor="edit-email-notify">Email</Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Switch 
+                    <Switch
                       id="edit-sms-notify"
                       checked={editingPayment.notificationSettings?.sms || false}
                       onCheckedChange={(checked) => setEditingPayment({
-                        ...editingPayment, 
+                        ...editingPayment,
                         notificationSettings: {
                           ...editingPayment.notificationSettings,
                           sms: checked
@@ -2037,13 +1679,13 @@ const PaymentReminderSystem: React.FC = () => {
                     />
                     <Label htmlFor="edit-sms-notify">SMS</Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Switch 
+                    <Switch
                       id="edit-push-notify"
                       checked={editingPayment.notificationSettings?.push || false}
                       onCheckedChange={(checked) => setEditingPayment({
-                        ...editingPayment, 
+                        ...editingPayment,
                         notificationSettings: {
                           ...editingPayment.notificationSettings,
                           push: checked
@@ -2052,13 +1694,13 @@ const PaymentReminderSystem: React.FC = () => {
                     />
                     <Label htmlFor="edit-push-notify">Push</Label>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
-                    <Switch 
+                    <Switch
                       id="edit-whatsapp-notify"
                       checked={editingPayment.notificationSettings?.whatsapp || false}
                       onCheckedChange={(checked) => setEditingPayment({
-                        ...editingPayment, 
+                        ...editingPayment,
                         notificationSettings: {
                           ...editingPayment.notificationSettings,
                           whatsapp: checked
@@ -2069,13 +1711,13 @@ const PaymentReminderSystem: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div>
                 <Label className="mb-2 block">Status</Label>
-                <Select 
+                <Select
                   defaultValue={editingPayment.status}
                   onValueChange={(value) => setEditingPayment({
-                    ...editingPayment, 
+                    ...editingPayment,
                     status: value as Payment['status']
                   })}
                 >
@@ -2089,31 +1731,31 @@ const PaymentReminderSystem: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <Label className="mb-2 block">Emotional Tone</Label>
                 <ToggleGroup type="single" value={editingPayment.emotionalTone} className="justify-start">
-                  <ToggleGroupItem 
-                    value="gentle" 
+                  <ToggleGroupItem
+                    value="gentle"
                     aria-label="Gentle reminder tone"
                     className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-900 dark:data-[state=on]:bg-blue-900 dark:data-[state=on]:text-blue-100"
-                    onClick={() => setEditingPayment({...editingPayment, emotionalTone: 'gentle'})}
+                    onClick={() => setEditingPayment({ ...editingPayment, emotionalTone: 'gentle' })}
                   >
                     <span className="mr-1">😊</span> Gentle
                   </ToggleGroupItem>
-                  <ToggleGroupItem 
-                    value="professional" 
+                  <ToggleGroupItem
+                    value="professional"
                     aria-label="Professional reminder tone"
                     className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-900 dark:data-[state=on]:bg-blue-900 dark:data-[state=on]:text-blue-100"
-                    onClick={() => setEditingPayment({...editingPayment, emotionalTone: 'professional'})}
+                    onClick={() => setEditingPayment({ ...editingPayment, emotionalTone: 'professional' })}
                   >
                     <span className="mr-1">🤝</span> Professional
                   </ToggleGroupItem>
-                  <ToggleGroupItem 
-                    value="urgent" 
+                  <ToggleGroupItem
+                    value="urgent"
                     aria-label="Urgent reminder tone"
                     className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-900 dark:data-[state=on]:bg-blue-900 dark:data-[state=on]:text-blue-100"
-                    onClick={() => setEditingPayment({...editingPayment, emotionalTone: 'urgent'})}
+                    onClick={() => setEditingPayment({ ...editingPayment, emotionalTone: 'urgent' })}
                   >
                     <span className="mr-1">⚠️</span> Urgent
                   </ToggleGroupItem>
@@ -2121,14 +1763,14 @@ const PaymentReminderSystem: React.FC = () => {
               </div>
             </div>
           )}
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditPaymentOpen(false)}>Cancel</Button>
             <Button onClick={handleEditPayment}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Share Payment Dialog */}
       <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
@@ -2138,7 +1780,7 @@ const PaymentReminderSystem: React.FC = () => {
               Share this payment reminder with others.
             </DialogDescription>
           </DialogHeader>
-          
+
           {sharingPayment && (
             <div className="py-4 space-y-4">
               <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
@@ -2154,7 +1796,7 @@ const PaymentReminderSystem: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="space-y-3">
                 <Label>People with access</Label>
                 {sharingPayment.sharedWith && sharingPayment.sharedWith.length > 0 ? (
@@ -2171,8 +1813,8 @@ const PaymentReminderSystem: React.FC = () => {
                             <div className="text-sm text-muted-foreground">{user.email}</div>
                           </div>
                         </div>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="ghost"
                           onClick={() => setSharingPayment({
                             ...sharingPayment,
@@ -2191,13 +1833,13 @@ const PaymentReminderSystem: React.FC = () => {
                   </div>
                 )}
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="email">Add people</Label>
                 <div className="flex space-x-2">
-                  <Input 
-                    id="email" 
-                    placeholder="Email address" 
+                  <Input
+                    id="email"
+                    placeholder="Email address"
                     className="flex-grow"
                   />
                   <Button>
@@ -2205,7 +1847,7 @@ const PaymentReminderSystem: React.FC = () => {
                   </Button>
                 </div>
               </div>
-              
+
               <div className="border-t pt-4">
                 <div className="flex items-center space-x-2">
                   <Switch id="notify-shared" />
@@ -2217,14 +1859,14 @@ const PaymentReminderSystem: React.FC = () => {
               </div>
             </div>
           )}
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsShareDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSharePayment}>Share</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* AI Assistant Dialog */}
       <Dialog open={isAIAssistantOpen} onOpenChange={setIsAIAssistantOpen}>
         <DialogContent className="sm:max-w-[500px] h-[600px] flex flex-col overflow-hidden">
@@ -2241,20 +1883,20 @@ const PaymentReminderSystem: React.FC = () => {
               </div>
             </div>
           </DialogHeader>
-          
+
           <div className="flex-1 overflow-y-auto py-4 space-y-4">
             {aiMessages.map((message) => (
               <div key={message.id} className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}>
                 <div className={`rounded-lg p-3 max-w-[80%] ${
-                  message.isUser 
-                    ? 'bg-sky-500 text-white' 
+                  message.isUser
+                    ? 'bg-sky-500 text-white'
                     : 'bg-gray-100 dark:bg-gray-800'
                 }`}>
                   {message.text}
                 </div>
               </div>
             ))}
-            
+
             {isAiTyping && (
               <div className="flex justify-start">
                 <div className="rounded-lg p-3 bg-gray-100 dark:bg-gray-800">
@@ -2266,13 +1908,13 @@ const PaymentReminderSystem: React.FC = () => {
                 </div>
               </div>
             )}
-            
+
             <div ref={messagesEndRef} />
           </div>
-          
+
           <div className="border-t pt-4">
             <div className="flex space-x-2">
-              <Input 
+              <Input
                 value={aiInput}
                 onChange={(e) => setAiInput(e.target.value)}
                 placeholder="Ask about your payments..."
@@ -2285,7 +1927,7 @@ const PaymentReminderSystem: React.FC = () => {
                   }
                 }}
               />
-              <Button 
+              <Button
                 onClick={handleAiSend}
                 disabled={isAiTyping || !aiInput.trim()}
               >
@@ -2301,7 +1943,7 @@ const PaymentReminderSystem: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
-      
+
       {/* Achievements Dialog */}
       <Dialog open={isAchievementDialogOpen} onOpenChange={setIsAchievementDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
@@ -2314,24 +1956,24 @@ const PaymentReminderSystem: React.FC = () => {
               Track your financial milestones
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4 space-y-4">
             {achievements.map(achievement => (
-              <motion.div 
+              <motion.div
                 key={achievement.id}
                 initial={achievement === selectedAchievement ? { scale: 1.05 } : { scale: 1 }}
                 animate={{ scale: 1 }}
                 whileHover={{ scale: 1.02 }}
                 className={`p-3 rounded-lg border ${
-                  achievement.unlocked 
-                    ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' 
+                  achievement.unlocked
+                    ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
                     : 'bg-gray-50 border-gray-200 dark:bg-gray-800/50 dark:border-gray-700'
                 }`}
               >
                 <div className="flex items-center space-x-3">
                   <div className={`p-2 rounded-full ${
-                    achievement.unlocked 
-                      ? 'bg-green-100 dark:bg-green-800' 
+                    achievement.unlocked
+                      ? 'bg-green-100 dark:bg-green-800'
                       : 'bg-gray-100 dark:bg-gray-700'
                   }`}>
                     {achievement.icon}
@@ -2362,7 +2004,7 @@ const PaymentReminderSystem: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
-      
+
       {/* Savings Recommendation Dialog */}
       <Dialog open={isSavingsDialogOpen} onOpenChange={setIsSavingsDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
@@ -2375,7 +2017,7 @@ const PaymentReminderSystem: React.FC = () => {
               Personalized tips to help you save money
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4 space-y-4">
             {currentSavingsTip ? (
               <motion.div
@@ -2405,7 +2047,7 @@ const PaymentReminderSystem: React.FC = () => {
                 <p>No savings tip available right now.</p>
               </div>
             )}
-            
+
             <div className="text-center space-y-2 pt-2">
               <p className="text-sm text-muted-foreground">
                 These recommendations are based on your payment history and spending patterns.
