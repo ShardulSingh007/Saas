@@ -57,7 +57,9 @@ function Router() {
       <Route path="/signup" component={SignupPage} />
       <Route path="/admin-login" component={AdminLogin} />
       <Route path="/admin">
-        <AdminProtectedRoute path="/admin" component={Admin} />
+        {({ params }) => (
+          <ProtectedRoute component={Admin} adminOnly={true} />
+        )}
       </Route>
       <Route path="/invoice-generator" component={InvoiceGenerator} />
       <Route path="/expense-tracker" component={ExpenseTracker} />
