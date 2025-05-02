@@ -621,10 +621,27 @@ const InvoiceGenerator: React.FC = () => {
     }
   };
 
-  // Variables for email dialog
+  // Variables for email dialog and invoices state
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [senderEmail, setSenderEmail] = useState(invoiceData.businessDetails.email);
   const [recipientEmail, setRecipientEmail] = useState(invoiceData.clientDetails.email);
+  const [invoices, setInvoices] = useState<any[]>([]);
+
+  // Fetch invoices when component mounts
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      try {
+        const response = await fetch('/api/invoices');
+        if (response.ok) {
+          const data = await response.json();
+          setInvoices(data);
+        }
+      } catch (error) {
+        console.error('Error fetching invoices:', error);
+      }
+    };
+    fetchInvoices();
+  }, []);
   const [emailSubject, setEmailSubject] = useState(`Invoice #${invoiceData.invoiceNumber} from ${invoiceData.businessDetails.name}`);
   const [emailMessage, setEmailMessage] = useState(`Please find attached Invoice #${invoiceData.invoiceNumber}. Payment is due by ${format(invoiceData.dueDate, 'MMM dd, yyyy')}. Thank you for your business.`);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
