@@ -89,6 +89,12 @@ interface InvoiceData {
   paymentLink?: string;
 }
 
+// Add new interface for saved invoice
+interface SavedInvoice extends InvoiceData {
+  id: string;
+  createdAt: string;
+}
+
 // Currency formatting helper
 const formatCurrency = (amount: number, currency: string) => {
   const currencySymbols: {[key: string]: string} = {
@@ -185,6 +191,7 @@ const InvoiceGenerator: React.FC = () => {
   const [showGuide, setShowGuide] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [savedInvoices, setSavedInvoices] = useState<SavedInvoice[]>([]);
 
   // Fetch invoices
   useEffect(() => {
@@ -230,6 +237,19 @@ const InvoiceGenerator: React.FC = () => {
         setInvoiceData(parsedData);
       } catch (error) {
         console.error('Error loading saved invoice:', error);
+      }
+    }
+  }, []);
+
+  // Load saved invoices from localStorage on component mount
+  useEffect(() => {
+    const saved = localStorage.getItem('invoiceHistory');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setSavedInvoices(parsed);
+      } catch (error) {
+        console.error('Error loading saved invoices:', error);
       }
     }
   }, []);
@@ -323,14 +343,41 @@ const InvoiceGenerator: React.FC = () => {
     });
   };
 
+  // Save invoice to history
+  const saveToHistory = (invoice: InvoiceData) => {
+    const savedInvoice: SavedInvoice = {
+      ...invoice,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedHistory = [savedInvoice, ...savedInvoices];
+    setSavedInvoices(updatedHistory);
+    localStorage.setItem('invoiceHistory', JSON.stringify(updatedHistory));
+  };
+
+  // Load invoice from history
+  const loadInvoice = (invoice: SavedInvoice) => {
+    setInvoiceData(invoice);
+    toast({
+      title: "Success",
+      description: "Invoice loaded successfully",
+    });
+  };
+
+  // Clear invoice history
+  const clearHistory = () => {
+    setSavedInvoices([]);
+    localStorage.removeItem('invoiceHistory');
+  };
+
+  // Modify handleSaveInvoice to save to history
   const handleSaveInvoice = () => {
-    try {
-      localStorage.setItem('savedInvoice', JSON.stringify(invoiceData));
-      alert('Invoice saved successfully!');
-    } catch (error) {
-      console.error('Error saving invoice:', error);
-      alert('Error saving invoice. Please try again.');
-    }
+    saveToHistory(invoiceData);
+    toast({
+      title: "Success",
+      description: "Invoice saved to history",
+    });
   };
 
   // Sample loading functionality removed as per user request
@@ -720,6 +767,106 @@ const InvoiceGenerator: React.FC = () => {
     //Implement view logic here
   };
 
+  // Add new component for Invoice History
+  const InvoiceHistory: React.FC<{
+    invoices: SavedInvoice[];
+    onLoadInvoice: (invoice: SavedInvoice) => void;
+    onClearHistory: () => void;
+  }> = ({ invoices, onLoadInvoice, onClearHistory }) => {
+    const [isConfirming, setIsConfirming] = useState(false);
+    const { toast } = useToast();
+
+    const handleClearHistory = () => {
+      if (isConfirming) {
+        onClearHistory();
+        setIsConfirming(false);
+        toast({
+          title: "Success",
+          description: "Invoice history cleared successfully",
+        });
+      } else {
+        setIsConfirming(true);
+        setTimeout(() => setIsConfirming(false), 3000);
+      }
+    };
+
+    return (
+      <Card className="mt-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Invoice History</CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleClearHistory}
+            className={isConfirming ? "bg-destructive text-destructive-foreground" : ""}
+          >
+            {isConfirming ? (
+              <>
+                <Trash2 className="h-4 w-4 mr-1" />
+                Click to Confirm
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4 mr-1" />
+                Clear History
+              </>
+            )}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {invoices.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                No saved invoices yet
+              </div>
+            ) : (
+              invoices.map((invoice) => (
+                <div
+                  key={invoice.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                >
+                  <div>
+                    <p className="font-medium">{invoice.clientDetails.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Invoice #{invoice.invoiceNumber}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(invoice.createdAt), "PPP")}
+                    </p>
+                    <p className="text-sm font-medium">
+                      Total: {formatCurrency(calculateSavedInvoiceTotal(invoice), invoice.currency)}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onLoadInvoice(invoice)}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      Load
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // Helper function to calculate total for a saved invoice
+  const calculateSavedInvoiceTotal = (invoice: SavedInvoice) => {
+    const subtotal = invoice.items.reduce((total, item) => total + item.amount, 0);
+    const tax = invoice.taxType === 'percentage' 
+      ? subtotal * (invoice.taxRate / 100)
+      : invoice.taxRate;
+    const discount = invoice.discountType === 'percentage'
+      ? subtotal * (invoice.discountRate / 100)
+      : invoice.discountRate;
+    return subtotal + tax - discount;
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -1637,38 +1784,11 @@ const InvoiceGenerator: React.FC = () => {
             </TabsContent>
           </Tabs>
           {/* Invoice History Section */}
-          {invoices && invoices.length > 0 && (
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>My Invoices</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {invoices.map((invoice) => (
-                    <div key={invoice.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{invoice.title}</p>
-                        <p className="text-sm text-muted-foreground">Invoice #{invoice.invoiceNumber}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {format(new Date(invoice.createdAt), 'PPP')}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => downloadSavedInvoice(invoice)}>
-                          <Download className="h-4 w-4 mr-1" />
-                          Download
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => viewInvoice(invoice)}>
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <InvoiceHistory
+            invoices={savedInvoices}
+            onLoadInvoice={loadInvoice}
+            onClearHistory={clearHistory}
+          />
         </div>
       </div>
     </div>

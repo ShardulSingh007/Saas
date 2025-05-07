@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useTaxCalculator } from "../TaxCalculatorProvider";
-import { formatCurrency } from "@/lib/taxCalculator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +17,8 @@ const Deductions: React.FC = () => {
     nextStep,
     prevStep,
     saveToLocalStorage,
-    calculationResults
+    calculationResults,
+    formatCurrencyWithCountry
   } = useTaxCalculator();
 
   const [otherDeductionName, setOtherDeductionName] = useState("");
@@ -49,7 +49,7 @@ const Deductions: React.FC = () => {
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="standard" id="standard" />
             <Label htmlFor="standard" className="cursor-pointer">
-              Standard Deduction ({formatCurrency(calculationResults?.totalDeductions || 0)})
+              Standard Deduction ({formatCurrencyWithCountry(calculationResults?.totalDeductions || 0)})
             </Label>
           </div>
           <div className="flex items-center space-x-2">
@@ -72,11 +72,10 @@ const Deductions: React.FC = () => {
                 <div>
                   <Label>Mortgage Interest</Label>
                   <div className="money-input-wrapper">
-                    <span>$</span>
                     <Input 
                       type="text" 
                       className="bg-muted" 
-                      value={formatCurrency(deductionsData.itemized.mortgage).replace('$', '')} 
+                      value={formatCurrencyWithCountry(deductionsData.itemized.mortgage).replace(/[^\d.,]/g, '')} 
                       onChange={(e) => updateItemizedDeduction('mortgage', e.target.value)} 
                     />
                   </div>
@@ -85,11 +84,10 @@ const Deductions: React.FC = () => {
                 <div>
                   <Label>State and Local Taxes</Label>
                   <div className="money-input-wrapper">
-                    <span>$</span>
                     <Input 
                       type="text" 
                       className="bg-muted" 
-                      value={formatCurrency(deductionsData.itemized.stateTaxes).replace('$', '')} 
+                      value={formatCurrencyWithCountry(deductionsData.itemized.stateTaxes).replace(/[^\d.,]/g, '')} 
                       onChange={(e) => updateItemizedDeduction('stateTaxes', e.target.value)} 
                     />
                   </div>
@@ -100,11 +98,10 @@ const Deductions: React.FC = () => {
                 <div>
                   <Label>Charitable Donations</Label>
                   <div className="money-input-wrapper">
-                    <span>$</span>
                     <Input 
                       type="text" 
                       className="bg-muted" 
-                      value={formatCurrency(deductionsData.itemized.charitableDonations).replace('$', '')} 
+                      value={formatCurrencyWithCountry(deductionsData.itemized.charitableDonations).replace(/[^\d.,]/g, '')} 
                       onChange={(e) => updateItemizedDeduction('charitableDonations', e.target.value)} 
                     />
                   </div>
@@ -113,11 +110,10 @@ const Deductions: React.FC = () => {
                 <div>
                   <Label>Medical Expenses</Label>
                   <div className="money-input-wrapper">
-                    <span>$</span>
                     <Input 
                       type="text" 
                       className="bg-muted" 
-                      value={formatCurrency(deductionsData.itemized.medicalExpenses).replace('$', '')} 
+                      value={formatCurrencyWithCountry(deductionsData.itemized.medicalExpenses).replace(/[^\d.,]/g, '')} 
                       onChange={(e) => updateItemizedDeduction('medicalExpenses', e.target.value)} 
                     />
                   </div>
@@ -128,11 +124,10 @@ const Deductions: React.FC = () => {
                 <div>
                   <Label>Student Loan Interest</Label>
                   <div className="money-input-wrapper">
-                    <span>$</span>
                     <Input 
                       type="text" 
                       className="bg-muted" 
-                      value={formatCurrency(deductionsData.itemized.studentLoanInterest).replace('$', '')} 
+                      value={formatCurrencyWithCountry(deductionsData.itemized.studentLoanInterest).replace(/[^\d.,]/g, '')} 
                       onChange={(e) => updateItemizedDeduction('studentLoanInterest', e.target.value)} 
                     />
                   </div>
@@ -141,11 +136,10 @@ const Deductions: React.FC = () => {
                 <div>
                   <Label>Retirement Contributions</Label>
                   <div className="money-input-wrapper">
-                    <span>$</span>
                     <Input 
                       type="text" 
                       className="bg-muted" 
-                      value={formatCurrency(deductionsData.itemized.retirement).replace('$', '')} 
+                      value={formatCurrencyWithCountry(deductionsData.itemized.retirement).replace(/[^\d.,]/g, '')} 
                       onChange={(e) => updateItemizedDeduction('retirement', e.target.value)} 
                     />
                   </div>
@@ -162,7 +156,7 @@ const Deductions: React.FC = () => {
                     <div key={index} className="flex items-center mb-2">
                       <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="font-medium">{item.name}</div>
-                        <div>{formatCurrency(item.amount)}</div>
+                        <div>{formatCurrencyWithCountry(item.amount)}</div>
                       </div>
                       <Button 
                         variant="outline" 
@@ -194,7 +188,6 @@ const Deductions: React.FC = () => {
                   <div className="flex items-center">
                     <Label className="mr-2">Amount</Label>
                     <div className="money-input-wrapper flex-1">
-                      <span>$</span>
                       <Input 
                         type="text" 
                         className="bg-muted" 
@@ -222,7 +215,7 @@ const Deductions: React.FC = () => {
         <h4 className="text-md font-medium mb-2">Deduction Summary</h4>
         <div className="flex justify-between">
           <span>Total Deductions:</span>
-          <span className="font-semibold">{formatCurrency(calculationResults?.totalDeductions || 0)}</span>
+          <span className="font-semibold">{formatCurrencyWithCountry(calculationResults?.totalDeductions || 0)}</span>
         </div>
       </div>
       

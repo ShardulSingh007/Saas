@@ -1,12 +1,13 @@
 import sgMail from '@sendgrid/mail';
 
-// Ensure the API key is set
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-if (!SENDGRID_API_KEY) {
-  throw new Error("SENDGRID_API_KEY environment variable must be set");
-}
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '';
 
-sgMail.setApiKey(SENDGRID_API_KEY);
+// Only set the API key if it exists
+if (SENDGRID_API_KEY) {
+  sgMail.setApiKey(SENDGRID_API_KEY);
+} else {
+  console.warn("⚠️ SENDGRID_API_KEY is not set. Emails will not be sent.");
+}
 
 interface EmailParams {
   to: string;
@@ -23,8 +24,12 @@ interface EmailParams {
 }
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
+  if (!SENDGRID_API_KEY) {
+    console.error("Cannot send email: SENDGRID_API_KEY is missing.");
+    return false;
+  }
+
   try {
-    // Create the email message
     const msg: sgMail.MailDataRequired = {
       to: params.to,
       from: params.from,
@@ -32,17 +37,16 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
       text: params.text || '',
       html: params.html || ''
     };
-    
-    // Add attachments if they exist
-    if (params.attachments && params.attachments.length > 0) {
+
+    if (params.attachments?.length) {
       msg.attachments = params.attachments;
     }
-    
+
     await sgMail.send(msg);
-    console.log(`Email sent successfully to ${params.to}`);
+    console.log(`✅ Email sent successfully to ${params.to}`);
     return true;
   } catch (error) {
-    console.error('SendGrid email error:', error);
+    console.error('❌ SendGrid email error:', error);
     return false;
   }
 }

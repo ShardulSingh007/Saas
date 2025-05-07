@@ -1,312 +1,228 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useTaxCalculator } from "../TaxCalculatorProvider";
-import { countries, taxYears, filingStatuses, FilingStatus } from "@/lib/constants";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { PlusIcon, ArrowRightIcon, XIcon } from "lucide-react";
+import CountrySelector from "../CountrySelector";
+import { Button } from "@/components/ui/button";
+import { XIcon } from 'lucide-react';
+import clsx from 'clsx';
+
+const TAX_YEARS = [2024, 2023, 2022, 2021, 2020];
+const FILING_STATUSES = [
+  { value: "single", label: "Single" },
+  { value: "married", label: "Married Filing Jointly" },
+  { value: "head", label: "Head of Household" },
+];
 
 const BasicInfo: React.FC = () => {
-  const { 
-    country, 
-    setCountry,
-    taxYear, 
-    setTaxYear,
-    filingStatus, 
-    setFilingStatus,
-    age, 
-    setAge,
-    incomeData,
-    updateSalary,
-    updateTaxWithheld,
-    updateBusinessIncome,
-    updateBusinessExpenses,
-    updateDividends,
-    updateCapitalGains,
-    addOtherIncome,
-    removeOtherIncome,
-    nextStep,
-    saveToLocalStorage,
-    formatCurrencyWithCountry
+  const {
+    basicInfoData = { year: TAX_YEARS[0], filingStatus: "single", age: 30, incomeSources: [] },
+    updateBasicInfo,
+    currencyInfo,
+    nextStep
   } = useTaxCalculator();
 
-  const [otherIncomeName, setOtherIncomeName] = useState("");
-  const [otherIncomeAmount, setOtherIncomeAmount] = useState("0.00");
+  const [newSourceLabel, setNewSourceLabel] = useState("");
+  const [newSourceAmount, setNewSourceAmount] = useState("");
+  const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
 
-  // Get currency symbol for the country
-  const currencySymbol = useMemo(() => {
-    const formatter = new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: country === 'us' ? 'USD' : 
-               country === 'ca' ? 'CAD' : 
-               country === 'uk' ? 'GBP' : 
-               country === 'in' ? 'INR' : 
-               country === 'au' ? 'AUD' : 
-               country === 'eu' ? 'EUR' : 'USD'
-    });
-    return formatter.format(0).replace(/[\d.,]/g, '');
-  }, [country]);
+  const incomeSources = basicInfoData.incomeSources || [];
 
-  const handleAddOtherIncome = () => {
-    addOtherIncome(otherIncomeName, otherIncomeAmount);
-    setOtherIncomeName("");
-    setOtherIncomeAmount("0.00");
+  // Validation helpers
+  const isInvalid = (value: number) => value === null || value === undefined || isNaN(value) || value < 0;
+  const isEmpty = (value: number) => value === null || value === undefined;
+
+  // Required fields: Salary/Wages, Tax Withheld, Business Income, Business Expense, Dividends, Capital Gains
+  const requiredFields = incomeSources.slice(0, 6);
+  const allValid = requiredFields.every(src => !isInvalid(src.value));
+
+  // Live summary
+  const totalGrossIncome = incomeSources.reduce((sum, src) => sum + (isInvalid(src.value) ? 0 : src.value), 0);
+  // Fields Filled logic: X = number of numeric income fields (standard + custom) that are non-empty and non-zero
+  // Y = total number of income input fields shown
+  const filledFields = incomeSources.filter(src => src.value !== null && src.value !== undefined && src.value !== 0 && !isNaN(src.value)).length;
+  const totalFields = incomeSources.length;
+
+  // Handlers
+  const handleIncomeChange = (idx: number, value: string) => {
+    const updated = [...incomeSources];
+    updated[idx].value = parseFloat(value) || 0;
+    updateBasicInfo({ incomeSources: updated });
+    setTouched(t => ({ ...t, [idx]: true }));
   };
-
+  const handleAddIncomeSource = () => {
+    if (newSourceLabel && newSourceAmount && !isInvalid(parseFloat(newSourceAmount))) {
+      updateBasicInfo({ incomeSources: [...incomeSources, { label: newSourceLabel, value: parseFloat(newSourceAmount) || 0 }] });
+      setNewSourceLabel("");
+      setNewSourceAmount("");
+    }
+  };
+  const handleRemoveCustomSource = (idx: number) => {
+    if (idx > 5) {
+      const updated = incomeSources.filter((_, i) => i !== idx);
+      updateBasicInfo({ incomeSources: updated });
+    }
+  };
   const handleContinue = () => {
-    saveToLocalStorage();
-    nextStep();
-  };
-
-  // Function to format displayed values in inputs
-  const formatInputValue = (value: number) => {
-    const formatted = formatCurrencyWithCountry(value);
-    return formatted.replace(/[^\d.,]/g, '');
+    if (allValid) nextStep();
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-background p-5 rounded-lg mb-6">
-        <h3 className="text-lg font-medium mb-4">Income Information</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div>
-            <Label htmlFor="country">Country</Label>
-            <Select 
-              value={country} 
-              onValueChange={setCountry}
-            >
-              <SelectTrigger className="w-full bg-muted">
-                <SelectValue placeholder="Select country" />
-              </SelectTrigger>
-              <SelectContent>
-                {countries.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div>
-            <Label htmlFor="taxYear">Tax Year</Label>
-            <Select 
-              value={taxYear.toString()} 
-              onValueChange={(value) => setTaxYear(parseInt(value, 10))}
-            >
-              <SelectTrigger className="w-full bg-muted">
-                <SelectValue placeholder="Select tax year" />
-              </SelectTrigger>
-              <SelectContent>
-                {taxYears.map(y => (
-                  <SelectItem key={y.id} value={y.id.toString()}>{y.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+    <div className="bg-background p-6 rounded-lg mb-8 shadow-md">
+      {/* Section Header */}
+      <h3 className="text-xl font-semibold mb-6">Income Information</h3>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        {/* Country */}
+        <div>
+          <Label htmlFor="country">Country</Label>
+          <CountrySelector />
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div>
-            <Label htmlFor="filingStatus">Filing Status</Label>
-            <Select 
-              value={filingStatus} 
-              onValueChange={setFilingStatus}
-            >
-              <SelectTrigger className="w-full bg-muted">
-                <SelectValue placeholder="Select filing status" />
-              </SelectTrigger>
-              <SelectContent>
-                {(filingStatuses[country] || filingStatuses.default).map((status: FilingStatus) => (
-                  <SelectItem key={status.id} value={status.id}>{status.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div>
-            <Label htmlFor="age">Your Age</Label>
-            <Input 
-              type="number" 
-              id="age" 
-              className="bg-muted" 
-              value={age} 
-              onChange={(e) => setAge(parseInt(e.target.value, 10) || 0)} 
-              min={0}
-              max={120}
-            />
-          </div>
+        {/* Tax Year */}
+        <div>
+          <Label htmlFor="taxYear">Tax Year</Label>
+          <select
+            id="taxYear"
+            className="w-full p-2 border rounded-md bg-muted text-foreground"
+            value={basicInfoData.year}
+            onChange={e => updateBasicInfo({ year: parseInt(e.target.value) })}
+          >
+            {TAX_YEARS.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        </div>
+        {/* Filing Status */}
+        <div>
+          <Label htmlFor="filingStatus">Filing Status</Label>
+          <select
+            id="filingStatus"
+            className="w-full p-2 border rounded-md bg-muted text-foreground"
+            value={basicInfoData.filingStatus}
+            onChange={e => updateBasicInfo({ filingStatus: e.target.value })}
+          >
+            {FILING_STATUSES.map(status => (
+              <option key={status.value} value={status.value}>{status.label}</option>
+            ))}
+          </select>
+        </div>
+        {/* Age */}
+        <div>
+          <Label htmlFor="age">Your Age</Label>
+          <input
+            id="age"
+            type="number"
+            min={0}
+            className={clsx("w-full bg-muted text-foreground border rounded-md py-2", isInvalid(basicInfoData.age) && touched['age'] && "border-destructive")}
+            value={basicInfoData.age}
+            onChange={e => { updateBasicInfo({ age: parseInt(e.target.value) }); setTouched(t => ({ ...t, age: true })); }}
+          />
+          {isInvalid(basicInfoData.age) && touched['age'] && (
+            <span className="text-xs text-destructive">Enter valid age</span>
+          )}
         </div>
       </div>
-      
-      <div className="bg-background p-5 rounded-lg mb-6">
-        <h3 className="text-lg font-medium mb-4">Income Sources</h3>
-        
-        {/* Employment Income */}
-        <div className="mb-6">
-          <h4 className="text-md font-medium text-foreground mb-3">Employment Income</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label>Salary/Wages</Label>
-              <div className="money-input-wrapper">
-                <span>{currencySymbol}</span>
-                <Input 
-                  type="text"
-                  className="bg-muted" 
-                  value={formatInputValue(incomeData.employment.salary)} 
-                  onChange={(e) => updateSalary(e.target.value)} 
-                />
-              </div>
-            </div>
-            
-            <div>
-              <Label>Tax Withheld</Label>
-              <div className="money-input-wrapper">
-                <span>{currencySymbol}</span>
-                <Input 
-                  type="text" 
-                  className="bg-muted" 
-                  value={formatInputValue(incomeData.employment.withheld)} 
-                  onChange={(e) => updateTaxWithheld(e.target.value)}
-                />
-              </div>
+
+      {/* Section Header */}
+      <h4 className="text-lg font-semibold mb-4">Income Sources</h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        {/* Standard sources */}
+        {incomeSources.slice(0, 6).map((src, idx) => (
+          <div key={idx}>
+            <Label>{src.label}</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{currencyInfo?.symbol}</span>
+              <input
+                type="number"
+                className={clsx("w-full pl-8 bg-muted text-foreground border rounded-md py-2", isInvalid(src.value) && touched[idx] && "border-destructive")}
+                value={src.value}
+                onChange={e => handleIncomeChange(idx, e.target.value)}
+                min={0}
+                onBlur={() => setTouched(t => ({ ...t, [idx]: true }))}
+              />
+              {isInvalid(src.value) && touched[idx] && (
+                <span className="text-xs text-destructive absolute right-2 top-1/2 -translate-y-1/2">Enter valid amount</span>
+              )}
             </div>
           </div>
-        </div>
-        
-        {/* Self-Employment Income */}
-        <div className="mb-6">
-          <h4 className="text-md font-medium text-foreground mb-3">Self-Employment Income</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label>Business Income</Label>
-              <div className="money-input-wrapper">
-                <span>{currencySymbol}</span>
-                <Input 
-                  type="text" 
-                  className="bg-muted" 
-                  value={formatInputValue(incomeData.selfEmployment.business)} 
-                  onChange={(e) => updateBusinessIncome(e.target.value)}
-                />
-              </div>
-            </div>
-            
-            <div>
-              <Label>Business Expenses</Label>
-              <div className="money-input-wrapper">
-                <span>{currencySymbol}</span>
-                <Input 
-                  type="text" 
-                  className="bg-muted" 
-                  value={formatInputValue(incomeData.selfEmployment.expenses)} 
-                  onChange={(e) => updateBusinessExpenses(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Investment Income */}
-        <div className="mb-6">
-          <h4 className="text-md font-medium text-foreground mb-3">Investment Income</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label>Dividends</Label>
-              <div className="money-input-wrapper">
-                <span>{currencySymbol}</span>
-                <Input 
-                  type="text" 
-                  className="bg-muted" 
-                  value={formatInputValue(incomeData.investment.dividends)} 
-                  onChange={(e) => updateDividends(e.target.value)}
-                />
-              </div>
-            </div>
-            
-            <div>
-              <Label>Capital Gains</Label>
-              <div className="money-input-wrapper">
-                <span>{currencySymbol}</span>
-                <Input 
-                  type="text" 
-                  className="bg-muted" 
-                  value={formatInputValue(incomeData.investment.capitalGains)}
-                  onChange={(e) => updateCapitalGains(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Other Income Sources */}
-        {incomeData.other.length > 0 && (
-          <div className="mb-6">
-            <h4 className="text-md font-medium text-foreground mb-3">Other Income Sources</h4>
-            {incomeData.other.map((item, index) => (
-              <div key={index} className="flex items-center mb-2">
-                <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="font-medium">{item.name}</div>
-                  <div>{formatCurrencyWithCountry(item.amount)}</div>
+        ))}
+      </div>
+      {/* Custom sources */}
+      {incomeSources.length > 6 && (
+        <div className="mb-4">
+          <h5 className="font-medium mb-2">Custom Income Sources</h5>
+          <div className="space-y-2">
+            {incomeSources.slice(6).map((src, idx) => (
+              <div key={6 + idx} className="flex items-center gap-2">
+                <Label className="flex-1">{src.label}</Label>
+                <div className="relative w-32">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{currencyInfo?.symbol}</span>
+                  <input
+                    type="number"
+                    className={clsx("w-full pl-8 bg-muted text-foreground border rounded-md py-2", isInvalid(src.value) && touched[6 + idx] && "border-destructive")}
+                    value={src.value}
+                    onChange={e => handleIncomeChange(6 + idx, e.target.value)}
+                    min={0}
+                    onBlur={() => setTouched(t => ({ ...t, [6 + idx]: true }))}
+                  />
+                  {isInvalid(src.value) && touched[6 + idx] && (
+                    <span className="text-xs text-destructive absolute right-2 top-1/2 -translate-y-1/2">Enter valid amount</span>
+                  )}
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="ml-2" 
-                  onClick={() => removeOtherIncome(index)}
+                <button
+                  type="button"
+                  className="text-destructive hover:bg-destructive/10 rounded p-1"
+                  onClick={() => handleRemoveCustomSource(6 + idx)}
+                  aria-label="Remove"
                 >
-                  <XIcon className="h-4 w-4" />
-                </Button>
+                  <XIcon size={16} />
+                </button>
               </div>
             ))}
           </div>
-        )}
-        
-        {/* Add Other Income */}
-        <div className="mb-6">
-          <h4 className="text-md font-medium text-foreground mb-3">Add Income Source</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Input 
-                type="text" 
-                placeholder="E.g. Rental Income" 
-                className="bg-muted" 
-                value={otherIncomeName}
-                onChange={(e) => setOtherIncomeName(e.target.value)}
-              />
-            </div>
-            
-            <div className="flex items-center">
-              <Label className="mr-2">Amount</Label>
-              <div className="money-input-wrapper flex-1">
-                <span>{currencySymbol}</span>
-                <Input 
-                  type="text" 
-                  className="bg-muted" 
-                  value={otherIncomeAmount} 
-                  onChange={(e) => setOtherIncomeAmount(e.target.value)}
-                />
-              </div>
-              <Button 
-                className="ml-2 bg-primary" 
-                onClick={handleAddOtherIncome}
-              >
-                <PlusIcon className="mr-1 h-4 w-4" />
-                <span>Add Income Source</span>
-              </Button>
-            </div>
-          </div>
         </div>
-        
-        {/* Navigation Buttons */}
-        <div className="flex justify-end mt-6">
-          <Button 
-            className="bg-primary" 
-            onClick={handleContinue}
-          >
-            Continue to Deductions
-            <ArrowRightIcon className="ml-2 h-4 w-4" />
-          </Button>
+      )}
+      {/* Add Custom Income Source */}
+      <div className="flex flex-col md:flex-row gap-2 mb-6">
+        <input
+          placeholder="Label (e.g. Rental Income)"
+          value={newSourceLabel}
+          onChange={e => setNewSourceLabel(e.target.value)}
+          className="bg-muted text-foreground md:w-1/3 border rounded-md py-2 px-3"
+        />
+        <div className="relative md:w-1/3">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{currencyInfo?.symbol}</span>
+          <input
+            placeholder="Amount"
+            type="number"
+            value={newSourceAmount}
+            onChange={e => setNewSourceAmount(e.target.value)}
+            className={clsx("w-full pl-8 bg-muted text-foreground border rounded-md py-2", isInvalid(parseFloat(newSourceAmount)) && newSourceAmount !== '' && "border-destructive")}
+            min={0}
+            onBlur={() => setTouched(t => ({ ...t, custom: true }))}
+          />
+          {isInvalid(parseFloat(newSourceAmount)) && newSourceAmount !== '' && (
+            <span className="text-xs text-destructive absolute right-2 top-1/2 -translate-y-1/2">Enter valid amount</span>
+          )}
         </div>
+        <Button type="button" onClick={handleAddIncomeSource} className={clsx("md:w-1/6", allValid ? "animate-bounce" : "opacity-50 pointer-events-none")}>Add Income Source</Button>
+      </div>
+      {/* Live Summary */}
+      <div className="bg-muted rounded-lg p-4 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+        <div>
+          <span className="font-medium">Total Gross Income:</span> <span className="text-primary font-semibold">{currencyInfo?.symbol}{totalGrossIncome.toLocaleString()}</span>
+        </div>
+        <div>
+          <span className="font-medium">Fields Filled:</span> <span className={filledFields >= 1 ? "text-primary font-semibold" : ""}>{filledFields}</span> / {totalFields}
+        </div>
+      </div>
+      {/* Continue Button */}
+      <div className="flex justify-end">
+        <Button className={clsx("bg-primary", allValid ? "animate-pulse" : "opacity-50 pointer-events-none")}
+          onClick={handleContinue}
+          disabled={!allValid}
+        >
+          Continue to Deductions
+        </Button>
       </div>
     </div>
   );

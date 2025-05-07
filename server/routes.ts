@@ -6,6 +6,11 @@ import { json } from "express";
 import session from "express-session";
 import crypto from "crypto";
 import { sendEmail } from "./email";
+import { OAuth2Client } from 'google-auth-library';
+import { NextFunction } from "express";
+
+// Initialize Google OAuth2 client
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Set up authentication
 function setupAuth(app: Express) {
@@ -101,33 +106,68 @@ function setupAuth(app: Express) {
   // Admin login endpoint
   app.post('/api/auth/admin/login', async (req, res) => {
     try {
+      console.log('Received request body:', req.body);
+      const { secretKey } = req.body;
+
+      if (!secretKey) {
+        console.log('No secret key provided in request');
+        return res.status(400).json({ error: 'Secret key is required' });
+      }
+
+      console.log('Checking secret key:', secretKey);
+      // Check if the secret key matches
+      if (secretKey !== 'admin123456') {
+        console.log('Invalid secret key provided');
+        return res.status(401).json({ error: 'Invalid secret key' });
+      }
+
+      // Create or get admin user
+      let adminUser = await storage.getUserByUsername('admin');
+      
+      if (!adminUser) {
+        // Create admin user if it doesn't exist
+        const hashedPassword = await storage.hashPassword(crypto.randomBytes(16).toString('hex'));
+        adminUser = await storage.createUser({
+          username: 'admin',
+          password: hashedPassword,
+          name: 'Admin',
+          email: 'admin@example.com',
+          isAdmin: true,
+        });
+      }
+
+      // Save user info in session (excluding password)
+      const { password: _, ...userInfo } = adminUser;
+      (req.session as any).user = userInfo;
+
+      console.log('Admin login successful');
+      return res.json(userInfo);
+    } catch (error) {
+      console.error('Admin login error:', error);
+      res.status(500).json({ error: 'An error occurred during admin login' });
+    }
+  });
+
+  // Update admin credentials endpoint
+  app.post('/api/auth/admin/update-credentials', async (req, res) => {
+    try {
       const { username, password } = req.body;
 
       if (!username || !password) {
         return res.status(400).json({ error: 'Username and password are required' });
       }
 
-      const user = await storage.getUserByUsername(username);
-
-      if (!user || !user.isAdmin) {
-        // Don't reveal if it's a non-admin account for security
-        return res.status(401).json({ error: 'Invalid admin credentials' });
+      // Validate password strength
+      if (password.length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters long' });
       }
 
-      const isPasswordValid = await storage.verifyPassword(password, user.password);
+      await storage.updateAdminCredentials(username, password);
 
-      if (!isPasswordValid) {
-        return res.status(401).json({ error: 'Invalid admin credentials' });
-      }
-
-      // Save user info in session (excluding password)
-      const { password: _, ...userInfo } = user;
-      (req.session as any).user = userInfo;
-
-      return res.json(userInfo);
-    } catch (error) {
-      console.error('Admin login error:', error);
-      res.status(500).json({ error: 'An error occurred during admin login' });
+      return res.json({ message: 'Admin credentials updated successfully' });
+    } catch (error: any) {
+      console.error('Error updating admin credentials:', error);
+      res.status(500).json({ error: error.message || 'An error occurred while updating admin credentials' });
     }
   });
 
@@ -150,7 +190,65 @@ function setupAuth(app: Express) {
 
     return res.json(user);
   });
+
+  // Google authentication endpoint
+  app.post('/api/auth/google', async (req, res) => {
+    try {
+      const { credential } = req.body;
+
+      if (!credential) {
+        return res.status(400).json({ error: 'Google credential is required' });
+      }
+
+      // Verify the Google ID token
+      const ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload) {
+        return res.status(401).json({ error: 'Invalid Google token' });
+      }
+
+      const { sub: googleId, email, name, picture } = payload;
+
+      // Check if user already exists
+      let user = await storage.getUserByEmail(email!);
+
+      if (!user) {
+        // Create new user
+        const username = email!.split('@')[0];
+        const hashedPassword = await storage.hashPassword(crypto.randomBytes(16).toString('hex'));
+        
+        user = await storage.createUser({
+          username,
+          password: hashedPassword,
+          name: name || username,
+          email: email!,
+          isAdmin: false,
+        });
+      }
+
+      // Save user info in session (excluding password)
+      const { password: _, ...userInfo } = user;
+      (req.session as any).user = userInfo;
+
+      return res.json(userInfo);
+    } catch (error) {
+      console.error('Google authentication error:', error);
+      res.status(500).json({ error: 'Failed to authenticate with Google' });
+    }
+  });
 }
+
+// Admin middleware
+const adminAuth = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.session.user?.isAdmin) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+  next();
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication
@@ -451,31 +549,233 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin routes
-  app.get('/api/admin/users', async (req, res) => {
+  app.get('/api/admin/users', adminAuth, async (req: Request, res: Response) => {
     try {
-      const { user } = req.session as any;
-      if (!user?.isAdmin) {
-        return res.status(403).json({ error: 'Not authorized' });
-      }
-
       const users = await storage.getAllUsers();
       res.json(users);
     } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch users' });
+      console.error('Error fetching users:', error);
+      res.status(500).json({ error: 'Internal server error' });
     }
   });
 
-  app.get('/api/admin/invoices', async (req, res) => {
+  app.get('/api/admin/stats', adminAuth, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const invoices = await storage.getAllInvoices();
+      const expenses = await storage.getAllExpenses();
+      const reminders = await storage.getAllReminders();
+
+      // Calculate stats
+      const stats = {
+        totalUsers: users.length,
+        totalInvoices: invoices.length,
+        totalExpenses: expenses.length,
+        totalReminders: reminders.length,
+        userGrowth: calculateGrowth(users.filter(u => new Date(u.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length, users.length),
+        invoiceGrowth: calculateGrowth(invoices.filter(i => new Date(i.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length, invoices.length),
+        expenseGrowth: calculateGrowth(expenses.filter(e => new Date(e.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length, expenses.length),
+        reminderGrowth: calculateGrowth(reminders.filter(r => new Date(r.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length, reminders.length),
+        taxSaved: expenses.reduce((sum, e) => sum + (e.amount || 0), 0),
+        upcomingPayments: reminders.filter(r => new Date(r.dueDate) > new Date() && new Date(r.dueDate) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)).length
+      };
+
+      res.json(stats);
+    } catch (error) {
+      console.error('Failed to fetch admin stats:', error);
+      res.status(500).json({ error: 'Failed to fetch admin stats' });
+    }
+  });
+
+  app.get('/api/admin/activity', adminAuth, async (req, res) => {
+    try {
+      const activities = await storage.getRecentActivity();
+      res.json(activities);
+    } catch (error) {
+      console.error('Failed to fetch admin activity:', error);
+      res.status(500).json({ error: 'Failed to fetch admin activity' });
+    }
+  });
+
+  app.get('/api/admin/recent-reminders', async (req, res) => {
     try {
       const { user } = req.session as any;
       if (!user?.isAdmin) {
         return res.status(403).json({ error: 'Not authorized' });
       }
 
-      const invoices = await storage.getAllInvoices();
-      res.json(invoices);
+      const reminders = await storage.getAllReminders();
+      // Sort by creation date and get the 10 most recent
+      const recentReminders = reminders
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 10);
+
+      res.json(recentReminders);
     } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch invoices' });
+      res.status(500).json({ error: 'Failed to fetch recent reminders' });
+    }
+  });
+
+  // Helper functions
+  function calculateCategoryStats(reminders: any[]) {
+    const categoryCounts = reminders.reduce((acc, reminder) => {
+      acc[reminder.category] = (acc[reminder.category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const total = reminders.length;
+    return Object.entries(categoryCounts).map(([category, count]) => ({
+      category,
+      count,
+      percentage: Math.round((count / total) * 100)
+    }));
+  }
+
+  function calculateNotificationStats(reminders: any[]) {
+    const stats = {
+      email: 0,
+      sms: 0,
+      push: 0,
+      whatsapp: 0
+    };
+
+    reminders.forEach(reminder => {
+      if (reminder.notificationSettings?.email) stats.email++;
+      if (reminder.notificationSettings?.sms) stats.sms++;
+      if (reminder.notificationSettings?.push) stats.push++;
+      if (reminder.notificationSettings?.whatsapp) stats.whatsapp++;
+    });
+
+    const total = reminders.length;
+    return {
+      email: Math.round((stats.email / total) * 100),
+      sms: Math.round((stats.sms / total) * 100),
+      push: Math.round((stats.push / total) * 100),
+      whatsapp: Math.round((stats.whatsapp / total) * 100)
+    };
+  }
+
+  function calculateTrend(current: number, previous: number): { percentage: number; type: 'up' | 'down' } {
+    if (previous === 0) return { percentage: 100, type: 'up' };
+    const percentage = ((current - previous) / previous) * 100;
+    return {
+      percentage: Math.round(percentage),
+      type: percentage >= 0 ? 'up' : 'down'
+    };
+  }
+
+  function convertToCSV(data: any[]): string {
+    if (data.length === 0) return '';
+    
+    const headers = Object.keys(data[0]);
+    const rows = data.map(obj => 
+      headers.map(header => {
+        const value = obj[header];
+        return typeof value === 'string' && value.includes(',') 
+          ? `"${value}"` 
+          : value;
+      }).join(',')
+    );
+    
+    return [headers.join(','), ...rows].join('\n');
+  }
+
+  app.post('/api/admin/users/:id/block', adminAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: 'Invalid user ID' });
+      }
+
+      await storage.blockUser(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error blocking user:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/admin/export', async (req, res) => {
+    try {
+      const { user } = req.session as any;
+      if (!user?.isAdmin) {
+        return res.status(403).json({ error: 'Not authorized' });
+      }
+
+      const { type } = req.query;
+      let data;
+
+      switch (type) {
+        case 'users':
+          data = await storage.getAllUsers();
+          break;
+        case 'invoices':
+          data = await storage.getAllInvoices();
+          break;
+        case 'expenses':
+          data = await storage.getAllExpenses();
+          break;
+        case 'tax-calculations':
+          data = await storage.getAllTaxCalculations();
+          break;
+        case 'reminders':
+          data = await storage.getAllReminders();
+          break;
+        default:
+          return res.status(400).json({ error: 'Invalid export type' });
+      }
+
+      // Convert data to CSV
+      const csv = convertToCSV(data);
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=${type}-export.csv`);
+      res.send(csv);
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      res.status(500).json({ error: 'Failed to export data' });
+    }
+  });
+
+  // Helper function to calculate growth percentage
+  function calculateGrowth(newCount: number, totalCount: number): number {
+    if (totalCount === 0) return 0;
+    return Math.round((newCount / totalCount) * 100);
+  }
+
+  app.get('/api/admin/invoices', adminAuth, async (req: Request, res: Response) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const result = await storage.getAllInvoices(page, limit);
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/admin/expenses', adminAuth, async (req: Request, res: Response) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const result = await storage.getAllExpenses(page, limit);
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching expenses:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/admin/reminders', adminAuth, async (req: Request, res: Response) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const result = await storage.getAllReminders(page, limit);
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching reminders:', error);
+      res.status(500).json({ error: 'Internal server error' });
     }
   });
 

@@ -7,6 +7,7 @@ import {
 } from "@shared/schema";
 import { calculateTax, parseCurrencyInput, formatCurrency } from "@/lib/taxCalculator";
 import { filingStatuses } from "@/lib/constants";
+import { getCurrencyInfo, formatCurrencyWithSymbol } from "@/lib/currency";
 
 // Steps for the tax calculator
 export enum Step {
@@ -59,6 +60,13 @@ const defaultCreditsData: CreditsData = {
   other: [],
 };
 
+interface BasicInfoData {
+  year: number;
+  filingStatus: string;
+  age: number;
+  incomeSources: { label: string; value: number }[];
+}
+
 interface TaxCalculatorContextType {
   currentStep: Step;
   setCurrentStep: React.Dispatch<React.SetStateAction<Step>>;
@@ -101,6 +109,9 @@ interface TaxCalculatorContextType {
   loadFromLocalStorage: () => void;
   clearAllData: () => void;
   formatCurrencyWithCountry: (amount: number) => string;
+  currencyInfo: any;
+  basicInfoData: BasicInfoData;
+  updateBasicInfo: (data: Partial<BasicInfoData>) => void;
 }
 
 const TaxCalculatorContext = createContext<TaxCalculatorContextType | undefined>(undefined);
@@ -126,6 +137,24 @@ export const TaxCalculatorProvider: React.FC<{ children: React.ReactNode }> = ({
   
   // Calculation results
   const [calculationResults, setCalculationResults] = useState<CalculationResults | null>(null);
+  
+  // Currency state
+  const [currencyInfo, setCurrencyInfo] = useState(() => getCurrencyInfo(country));
+  
+  // Basic info data state
+  const [basicInfoData, setBasicInfoData] = useState<BasicInfoData>({
+    year: taxYear,
+    filingStatus,
+    age,
+    incomeSources: [
+      { label: "Salary/Wages", value: 0 },
+      { label: "Tax Withheld", value: 0 },
+      { label: "Business Income", value: 0 },
+      { label: "Business Expense", value: 0 },
+      { label: "Dividends", value: 0 },
+      { label: "Capital Gains", value: 0 },
+    ],
+  });
   
   // Update calculation results whenever inputs change
   useEffect(() => {
@@ -154,6 +183,11 @@ export const TaxCalculatorProvider: React.FC<{ children: React.ReactNode }> = ({
       setFilingStatus(availableStatuses[0].id);
     }
   }, [country, filingStatus]);
+  
+  // Update currency info when country changes
+  useEffect(() => {
+    setCurrencyInfo(getCurrencyInfo(country));
+  }, [country]);
   
   // Navigation functions
   const nextStep = () => {
@@ -414,6 +448,36 @@ export const TaxCalculatorProvider: React.FC<{ children: React.ReactNode }> = ({
     loadFromLocalStorage();
   }, []);
   
+  const updateBasicInfo = (data: Partial<BasicInfoData>) => {
+    setBasicInfoData(prev => {
+      const updated = { ...prev, ...data };
+      // If incomeSources is updated, sync to incomeData
+      if (data.incomeSources) {
+        // Map standard sources
+        const [salary, taxWithheld, businessIncome, businessExpense, dividends, capitalGains, ...custom] = data.incomeSources;
+        setIncomeData(prevIncome => ({
+          employment: {
+            salary: salary?.value || 0,
+            withheld: taxWithheld?.value || 0,
+          },
+          selfEmployment: {
+            business: businessIncome?.value || 0,
+            expenses: businessExpense?.value || 0,
+          },
+          investment: {
+            dividends: dividends?.value || 0,
+            capitalGains: capitalGains?.value || 0,
+          },
+          other: custom.map(src => ({ name: src.label, amount: src.value })),
+        }));
+      }
+      if (data.year !== undefined) setTaxYear(data.year);
+      if (data.filingStatus !== undefined) setFilingStatus(data.filingStatus);
+      if (data.age !== undefined) setAge(data.age);
+      return updated;
+    });
+  };
+  
   const contextValue: TaxCalculatorContextType = {
     currentStep,
     setCurrentStep,
@@ -456,6 +520,9 @@ export const TaxCalculatorProvider: React.FC<{ children: React.ReactNode }> = ({
     loadFromLocalStorage,
     clearAllData,
     formatCurrencyWithCountry,
+    currencyInfo,
+    basicInfoData,
+    updateBasicInfo,
   };
   
   return (

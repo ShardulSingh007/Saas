@@ -1,27 +1,79 @@
-import * as React from "react"
-import * as SwitchPrimitives from "@radix-ui/react-switch"
+import { cn } from '@/lib/utils';
+import { forwardRef } from 'react';
 
-import { cn } from "@/lib/utils"
+interface SwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type' | 'checked' | 'onChange'> {
+  error?: string;
+  checked?: boolean;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  label?: string;
+}
 
-const Switch = React.forwardRef<
-  React.ElementRef<typeof SwitchPrimitives.Root>,
-  React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>
->(({ className, ...props }, ref) => (
-  <SwitchPrimitives.Root
-    className={cn(
-      "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input",
-      className
-    )}
-    {...props}
-    ref={ref}
-  >
-    <SwitchPrimitives.Thumb
-      className={cn(
-        "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
-      )}
-    />
-  </SwitchPrimitives.Root>
-))
-Switch.displayName = SwitchPrimitives.Root.displayName
+export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
+  ({ className, error, label, checked, ...props }, ref) => {
+    return (
+      <div className="relative">
+        <label className="flex items-center space-x-2">
+          <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 dark:bg-gray-700">
+            <input
+              type="checkbox"
+              className="peer sr-only"
+              checked={checked}
+              ref={ref}
+              {...props}
+            />
+            <div
+              className={cn(
+                'pointer-events-none absolute left-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5 peer-checked:bg-blue-500 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 peer-focus:ring-offset-2 dark:bg-gray-800 dark:peer-focus:ring-blue-400',
+                error && 'peer-focus:ring-red-500'
+              )}
+            />
+          </div>
+          {label && (
+            <span className="text-sm text-gray-700 dark:text-gray-200">
+              {label}
+            </span>
+          )}
+        </label>
+        {error && (
+          <div className="absolute -bottom-5 left-0 text-xs text-red-500">
+            {error}
+          </div>
+        )}
+      </div>
+    );
+  }
+);
+Switch.displayName = 'Switch';
 
-export { Switch }
+interface SwitchGroupProps {
+  options: { value: string; label: string }[];
+  value?: string[];
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  error?: string;
+  className?: string;
+  disabled?: boolean;
+}
+
+export function SwitchGroup({
+  options,
+  value = [],
+  onChange,
+  error,
+  className,
+  disabled
+}: SwitchGroupProps) {
+  return (
+    <div className={cn('space-y-2', className)}>
+      {options.map((option) => (
+        <Switch
+          key={option.value}
+          checked={value.includes(option.value)}
+          onChange={onChange}
+          label={option.label}
+          error={error}
+          disabled={disabled}
+        />
+      ))}
+    </div>
+  );
+}

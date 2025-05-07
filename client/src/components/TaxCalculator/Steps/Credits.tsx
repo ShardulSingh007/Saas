@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PlusIcon, ArrowRightIcon, ArrowLeftIcon, XIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const Credits: React.FC = () => {
   const { 
@@ -17,16 +18,20 @@ const Credits: React.FC = () => {
     removeOtherCredit,
     nextStep,
     prevStep,
-    saveToLocalStorage
+    saveToLocalStorage,
+    calculationResults,
+    formatCurrencyWithCountry
   } = useTaxCalculator();
 
   const [otherCreditName, setOtherCreditName] = useState("");
   const [otherCreditAmount, setOtherCreditAmount] = useState("0.00");
+  const [showAddCredit, setShowAddCredit] = useState(false);
 
   const handleAddOtherCredit = () => {
     addOtherCredit(otherCreditName, otherCreditAmount);
     setOtherCreditName("");
     setOtherCreditAmount("0.00");
+    setShowAddCredit(false);
   };
 
   const handleContinue = () => {
@@ -38,121 +43,115 @@ const Credits: React.FC = () => {
     <div className="bg-background p-5 rounded-lg mb-6">
       <h3 className="text-lg font-medium mb-4">Tax Credits</h3>
       
-      {/* Child Tax Credit */}
-      <div className="mb-6">
-        <h4 className="text-md font-medium text-foreground mb-3">Child Tax Credit</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label>Number of Qualifying Children</Label>
-            <Input 
-              type="number" 
-              className="bg-muted" 
-              value={creditsData.childTaxCredit.qualifying} 
-              onChange={(e) => updateChildTaxCredit(e.target.value)} 
-              min={0}
-              max={10}
-            />
-          </div>
-        </div>
-      </div>
-      
-      {/* Earned Income Credit */}
-      <div className="mb-6">
-        <h4 className="text-md font-medium text-foreground mb-3">Earned Income Credit</h4>
-        <div className="flex items-center space-x-2">
-          <Switch 
-            checked={creditsData.earnedIncome} 
-            onCheckedChange={toggleEarnedIncome} 
-            id="earned-income"
-          />
-          <Label htmlFor="earned-income">I qualify for the Earned Income Tax Credit</Label>
-        </div>
-        <p className="text-sm text-muted-foreground mt-2">
-          The Earned Income Tax Credit benefits low to moderate income workers and families.
-        </p>
-      </div>
-      
-      {/* Education Credits */}
-      <div className="mb-6">
-        <h4 className="text-md font-medium text-foreground mb-3">Education Credits</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label>Qualified Education Expenses</Label>
-            <div className="money-input-wrapper">
-              <span>$</span>
+      <div className="space-y-6">
+        {/* Child Tax Credit */}
+        <div className="space-y-4">
+          <h4 className="text-md font-medium">Child Tax Credit</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Number of Qualifying Children</Label>
               <Input 
-                type="text" 
-                className="bg-muted" 
-                value={formatCurrency(creditsData.education.tuition).replace('$', '')} 
-                onChange={(e) => updateEducationTuition(e.target.value)}
+                type="number" 
+                min="0"
+                value={creditsData.childTaxCredit.qualifying}
+                onChange={(e) => updateChildTaxCredit(e.target.value)}
               />
             </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Includes tuition and required fees for higher education
-            </p>
+            <div className="flex items-end">
+              <div className="text-sm text-muted-foreground">
+                Estimated Credit: {formatCurrencyWithCountry(calculationResults?.childTaxCredit || 0)}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-      
-      {/* Other Credits List */}
-      {creditsData.other.length > 0 && (
-        <div className="mb-6">
-          <h4 className="text-md font-medium text-foreground mb-3">Other Tax Credits</h4>
-          {creditsData.other.map((item, index) => (
-            <div key={index} className="flex items-center mb-2">
-              <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="font-medium">{item.name}</div>
-                <div>{formatCurrency(item.amount)}</div>
+
+        {/* Earned Income Credit */}
+        <div className="space-y-4">
+          <h4 className="text-md font-medium">Earned Income Credit</h4>
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="earnedIncome" 
+              checked={creditsData.earnedIncome}
+              onCheckedChange={(checked) => toggleEarnedIncome(checked as boolean)}
+            />
+            <Label htmlFor="earnedIncome" className="cursor-pointer">
+              Qualify for Earned Income Credit
+            </Label>
+          </div>
+          {creditsData.earnedIncome && (
+            <div className="text-sm text-muted-foreground">
+              Estimated Credit: {formatCurrencyWithCountry(calculationResults?.earnedIncomeCredit || 0)}
+            </div>
+          )}
+        </div>
+
+        {/* Education Credits */}
+        <div className="space-y-4">
+          <h4 className="text-md font-medium">Education Credits</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>Tuition and Fees</Label>
+              <div className="money-input-wrapper">
+                <Input 
+                  type="text" 
+                  value={formatCurrencyWithCountry(creditsData.education.tuition).replace(/[^\d.,]/g, '')}
+                  onChange={(e) => updateEducationTuition(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex items-end">
+              <div className="text-sm text-muted-foreground">
+                Estimated Credit: {formatCurrencyWithCountry(calculationResults?.educationCredit || 0)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Other Credits */}
+        <div className="space-y-4">
+          <h4 className="text-md font-medium">Other Credits</h4>
+          {creditsData.other.map((credit, index) => (
+            <div key={index} className="flex items-center space-x-4">
+              <div className="flex-1">
+                <Label>{credit.name}</Label>
+                <div className="money-input-wrapper">
+                  <Input 
+                    type="text" 
+                    value={formatCurrencyWithCountry(credit.amount).replace(/[^\d.,]/g, '')}
+                    onChange={(e) => updateOtherCredit(index, credit.name, e.target.value)}
+                  />
+                </div>
               </div>
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="ml-2" 
                 onClick={() => removeOtherCredit(index)}
               >
                 <XIcon className="h-4 w-4" />
               </Button>
             </div>
           ))}
+          <Button 
+            variant="outline" 
+            onClick={() => setShowAddCredit(true)}
+          >
+            <PlusIcon className="mr-2 h-4 w-4" />
+            Add Other Credit
+          </Button>
         </div>
-      )}
-      
-      {/* Add Other Credit */}
-      <div className="mb-6">
-        <h4 className="text-md font-medium text-foreground mb-3">Add Other Tax Credit</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Input 
-              type="text" 
-              placeholder="E.g. Residential Energy Credit" 
-              className="bg-muted" 
-              value={otherCreditName}
-              onChange={(e) => setOtherCreditName(e.target.value)}
-            />
-          </div>
-          
-          <div className="flex items-center">
-            <Label className="mr-2">Amount</Label>
-            <div className="money-input-wrapper flex-1">
-              <span>$</span>
-              <Input 
-                type="text" 
-                className="bg-muted" 
-                value={otherCreditAmount} 
-                onChange={(e) => setOtherCreditAmount(e.target.value)}
-              />
+
+        {/* Summary */}
+        <div className="bg-muted p-4 rounded-lg">
+          <h4 className="text-md font-medium mb-2">Credit Summary</h4>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span>Total Credits:</span>
+              <span className="font-semibold">{formatCurrencyWithCountry(calculationResults?.totalCredits || 0)}</span>
             </div>
-            <Button 
-              className="ml-2 bg-primary" 
-              onClick={handleAddOtherCredit}
-            >
-              <PlusIcon className="mr-1 h-4 w-4" />
-              <span>Add Credit</span>
-            </Button>
           </div>
         </div>
       </div>
-      
+
       {/* Navigation Buttons */}
       <div className="flex justify-between mt-6">
         <Button 
@@ -167,7 +166,7 @@ const Credits: React.FC = () => {
           className="bg-primary" 
           onClick={handleContinue}
         >
-          View Results
+          Continue to Results
           <ArrowRightIcon className="ml-2 h-4 w-4" />
         </Button>
       </div>

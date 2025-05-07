@@ -1,20 +1,27 @@
 import React, { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/contexts/auth-context";
 import { LogOut, Lock, Sun, Moon, FileText, DollarSign, PieChart, Bell, Menu, UserCircle } from "lucide-react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/theme-provider";
 import { CurrencySelector } from "@/components/CurrencySelector";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export function Navbar() {
-  const { user, logout, isAdmin } = useAuth();
-  const [_, navigate] = useLocation();
+  const { user, logout } = useAuth();
+  const location = useLocation();
   const { theme, setTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
+  if (isAdminRoute) {
+    return null;
+  }
+
   const handleLogout = async () => {
     await logout();
-    navigate("/");
   };
 
   const toggleTheme = () => {
@@ -22,45 +29,50 @@ export function Navbar() {
   };
 
   return (
-    <header className="border-b border-border">
+    <header className="border-b border-border bg-black">
       <div className="container mx-auto px-4 flex items-center justify-between h-16">
         <div className="flex items-center space-x-4">
-          {/* Brand Logo - Always Visible */}
-          <Link href="/">
-            <div className="flex items-center">
-              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mr-2">
-                Finance
-              </span>
-              <span className="text-2xl font-bold">Tools</span>
-            </div>
+          {/* Brand Logo - Gradient and Bold */}
+          <Link to="/" className="text-xl font-bold flex items-center select-none">
+            <span className="bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">Finance</span>
+            <span className="text-white font-extrabold ml-1">Pilot</span>
           </Link>
 
-          <div className="hidden md:flex space-x-4 ml-8">
-            <Link href="/">
-              <Button variant={useLocation()[0] === "/" ? "default" : "ghost"} className="flex items-center">
+          <div className="hidden md:flex space-x-2 ml-8">
+            <Link to="/tax-calculator">
+              <Button
+                variant={location.pathname === "/tax-calculator" ? "default" : "ghost"}
+                className={`flex items-center ${location.pathname === "/tax-calculator" ? "bg-blue-500 text-white" : "text-white hover:bg-gray-800"} font-medium px-4`}
+              >
                 <PieChart className="mr-1 h-4 w-4" />
-                <span className="font-medium">Tax Calculator</span>
+                Tax Calculator
               </Button>
             </Link>
-
-            <Link href="/invoice-generator">
-              <Button variant={useLocation()[0] === "/invoice-generator" ? "default" : "ghost"} className="flex items-center">
+            <Link to="/invoice-generator">
+              <Button
+                variant={location.pathname === "/invoice-generator" ? "default" : "ghost"}
+                className={`flex items-center ${location.pathname === "/invoice-generator" ? "bg-blue-500 text-white" : "text-white hover:bg-gray-800"} font-medium px-4`}
+              >
                 <FileText className="mr-1 h-4 w-4" />
-                <span className="font-medium">Invoice Generator</span>
+                Invoice Generator
               </Button>
             </Link>
-
-            <Link href="/expense-tracker">
-              <Button variant={useLocation()[0] === "/expense-tracker" ? "default" : "ghost"} className="flex items-center">
+            <Link to="/expense-tracker">
+              <Button
+                variant={location.pathname === "/expense-tracker" ? "default" : "ghost"}
+                className={`flex items-center ${location.pathname === "/expense-tracker" ? "bg-blue-500 text-white" : "text-white hover:bg-gray-800"} font-medium px-4`}
+              >
                 <DollarSign className="mr-1 h-4 w-4" />
-                <span className="font-medium">Expense Tracker</span>
+                Expense Tracker
               </Button>
             </Link>
-
-            <Link href="/payment-reminder">
-              <Button variant={useLocation()[0] === "/payment-reminder" ? "default" : "ghost"} className="flex items-center">
+            <Link to="/payment-reminder">
+              <Button
+                variant={location.pathname === "/payment-reminder" ? "default" : "ghost"}
+                className={`flex items-center ${location.pathname === "/payment-reminder" ? "bg-blue-500 text-white" : "text-white hover:bg-gray-800"} font-medium px-4`}
+              >
                 <Bell className="mr-1 h-4 w-4" />
-                <span className="font-medium">Payment Reminders</span>
+                Payment Reminders
               </Button>
             </Link>
           </div>
@@ -78,26 +90,20 @@ export function Navbar() {
             aria-expanded={mobileMenuOpen}
             role="navigation"
           >
-            <Link href="/">
-              <Button variant={useLocation()[0] === "/" ? "default" : "ghost"} className="w-full justify-start">
-                <PieChart className="mr-1 h-4 w-4" />
-                <span className="font-medium">Tax Calculator</span>
-              </Button>
-            </Link>
-            <Link href="/invoice-generator">
-              <Button variant={useLocation()[0] === "/invoice-generator" ? "default" : "ghost"} className="w-full justify-start">
+            <Link to="/invoice-generator">
+              <Button variant={location.pathname === "/invoice-generator" ? "default" : "ghost"} className="w-full justify-start">
                 <FileText className="mr-1 h-4 w-4" />
                 <span className="font-medium">Invoice Generator</span>
               </Button>
             </Link>
-            <Link href="/expense-tracker">
-              <Button variant={useLocation()[0] === "/expense-tracker" ? "default" : "ghost"} className="w-full justify-start">
+            <Link to="/expense-tracker">
+              <Button variant={location.pathname === "/expense-tracker" ? "default" : "ghost"} className="w-full justify-start">
                 <DollarSign className="mr-1 h-4 w-4" />
                 <span className="font-medium">Expense Tracker</span>
               </Button>
             </Link>
-            <Link href="/payment-reminder">
-              <Button variant={useLocation()[0] === "/payment-reminder" ? "default" : "ghost"} className="w-full justify-start">
+            <Link to="/payment-reminder">
+              <Button variant={location.pathname === "/payment-reminder" ? "default" : "ghost"} className="w-full justify-start">
                 <Bell className="mr-1 h-4 w-4" />
                 <span className="font-medium">Payment Reminders</span>
               </Button>
@@ -124,47 +130,29 @@ export function Navbar() {
           </Button>
 
           {user ? (
-            <>
-              <div className="hidden md:flex items-center">
-                <div className="flex items-center space-x-2 bg-muted/40 rounded-full py-1 px-3">
-                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <UserCircle className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="text-sm font-medium overflow-hidden text-ellipsis max-w-[150px]">
-                    {user.name || user.email}
-                  </div>
-                </div>
-              </div>
-
-              
-
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                onClick={handleLogout}
-              >
-                <LogOut className="h-4 w-4 mr-1" />
-                <span className="hidden md:inline">Logout</span>
-              </Button>
-            </>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback>{user.name ? user.name[0] : "U"}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
             <div className="flex space-x-2">
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                onClick={() => navigate("/signup")}
-                className="hidden md:flex"
-              >
-                Sign Up
-              </Button>
-              <Button 
-                variant="default" 
-                size="sm" 
-                onClick={() => navigate("/login")}
-              >
-                <UserCircle className="h-4 w-4 mr-1" />
-                <span className="md:inline">Login</span>
-              </Button>
+              <Link to="/login">
+                <Button variant="ghost">Login</Button>
+              </Link>
+              <Link to="/signup">
+                <Button>Sign Up</Button>
+              </Link>
             </div>
           )}
         </div>

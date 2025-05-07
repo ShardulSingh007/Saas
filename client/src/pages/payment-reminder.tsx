@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'wouter';
 import { CurrencySelector } from '@/components/CurrencySelector';
 import { PaymentReminderGuide } from '@/components/PaymentReminderGuide';
 import {
@@ -27,7 +28,8 @@ import {
   WifiOff,
   ChevronRight,
   Settings,
-  MessageSquare
+  MessageSquare,
+  BookOpen
 } from 'lucide-react';
 import {
   Card,
@@ -45,16 +47,29 @@ import {
 } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription
+  DialogTrigger
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import {
   Select,
   SelectContent,
@@ -65,16 +80,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Slider } from '@/components/ui/slider';
 import { Toggle } from '@/components/ui/toggle';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Progress } from '@/components/ui/progress';
-import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from '@/hooks/use-toast';
@@ -218,6 +224,7 @@ const PaymentReminderSystem: React.FC = () => {
   const [isSavingsDialogOpen, setIsSavingsDialogOpen] = useState<boolean>(false);
   const [isAchievementDialogOpen, setIsAchievementDialogOpen] = useState<boolean>(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState<boolean>(false);
+  const [isGuideDialogOpen, setIsGuideDialogOpen] = useState<boolean>(false);
   const [currentSavingsTip, setCurrentSavingsTip] = useState<SavingRecommendation | null>(null);
   const [newPayment, setNewPayment] = useState<Partial<Payment>>({
     title: '',
@@ -825,7 +832,7 @@ const PaymentReminderSystem: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="container max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
@@ -840,27 +847,14 @@ const PaymentReminderSystem: React.FC = () => {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="mr-2">
-                <CurrencySelector />
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setDarkMode(!darkMode)}
-                className="text-gray-500 dark:text-gray-400"
-              >
+              <CurrencySelector />
+              <Button variant="ghost" size="icon" onClick={() => setDarkMode(!darkMode)}>
                 {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </Button>
-
               <Badge variant={isOnline ? "default" : "destructive"} className="hidden sm:flex">
-                {isOnline ? (
-                  <Wifi className="h-3 w-3 mr-1" />
-                ) : (
-                  <WifiOff className="h-3 w-3 mr-1" />
-                )}
+                {isOnline ? <Wifi className="h-3 w-3 mr-1" /> : <WifiOff className="h-3 w-3 mr-1" />}
                 {isOnline ? "Online" : "Offline"}
               </Badge>
-
               <Button
                 variant="default"
                 size="sm"
@@ -875,8 +869,8 @@ const PaymentReminderSystem: React.FC = () => {
         </div>
       </header>
 
-      {/* Main */}
-      <main className="container max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+      {/* Main Content */}
+      <main className="flex-1 container max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-8 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-blue-600">
             Stay Ahead, Stress-Free — Your Finance Buddy's Got You!
@@ -1059,10 +1053,7 @@ const PaymentReminderSystem: React.FC = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* User Guide */}
-            <PaymentReminderGuide />
-
-            {/* AI Assistant */}
+            {/* Move AI Assistant to the top of the sidebar */}
             <Card className="overflow-hidden border-blue-200 dark:border-blue-900">
               <div className="bg-gradient-to-r from-sky-500 to-blue-600 p-4">
                 <div className="flex items-center space-x-3">
@@ -1108,7 +1099,7 @@ const PaymentReminderSystem: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Statistics Summary */}
+            {/* Payment Summary */}
             <Card>
               <CardHeader>
                 <CardTitle>Payment Summary</CardTitle>
@@ -1201,6 +1192,16 @@ const PaymentReminderSystem: React.FC = () => {
               </CardContent>
             </Card>
 
+            {/* User Guide Button */}
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setIsGuideDialogOpen(true)}
+            >
+              <BookOpen className="h-4 w-4 mr-2" />
+              View User Guide
+            </Button>
+
             {/* Achievements */}
             <Card>
               <CardHeader>
@@ -1262,804 +1263,31 @@ const PaymentReminderSystem: React.FC = () => {
         </div>
       </main>
 
-      {/* Dialogs/Modals */}
-
-      {/* Add Payment Dialog */}
-      <Dialog open={isAddPaymentOpen} onOpenChange={setIsAddPaymentOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+      {/* Guide Dialog */}
+      <Dialog open={isGuideDialogOpen} onOpenChange={setIsGuideDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add Payment Reminder</DialogTitle>
+            <DialogTitle>Payment Reminder Guide</DialogTitle>
             <DialogDescription>
-              Create a new payment reminder. Fill in the details below.
+              Get the most out of your Finance Buddy
             </DialogDescription>
           </DialogHeader>
-
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Payment Title</Label>
-                <Input
-                  id="title"
-                  placeholder="e.g. Monthly Rent"
-                  value={newPayment.title}
-                  onChange={(e) => setNewPayment({ ...newPayment, title: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="amount">Amount</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="amount"
-                    type="number"
-                    placeholder="0.00"
-                    className="pl-8"
-                    value={newPayment.amount || ''}
-                    onChange={(e) => setNewPayment({ ...newPayment, amount: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="dueDate">Due Date</Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  value={newPayment.dueDate
-                    ? newPayment.dueDate.toISOString().split('T')[0]
-                    : new Date().toISOString().split('T')[0]
-                  }
-                  onChange={(e) => setNewPayment({
-                    ...newPayment,
-                    dueDate: new Date(e.target.value)
-                  })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  onValueChange={(value) => setNewPayment({
-                    ...newPayment,
-                    category: value as Category
-                  })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="utilities">Utilities</SelectItem>
-                    <SelectItem value="subscriptions">Subscriptions</SelectItem>
-                    <SelectItem value="loans">Loans</SelectItem>
-                    <SelectItem value="rent">Rent</SelectItem>
-                    <SelectItem value="mortgage">Mortgage</SelectItem>
-                    <SelectItem value="insurance">Insurance</SelectItem>
-                    <SelectItem value="credit-card">Credit Card</SelectItem>
-                    <SelectItem value="investments">Investments</SelectItem>
-                    <SelectItem value="education">Education</SelectItem>
-                    <SelectItem value="healthcare">Healthcare</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes (Optional)</Label>
-              <Input
-                id="notes"
-                placeholder="Add any additional details"
-                value={newPayment.notes || ''}
-                onChange={(e) => setNewPayment({ ...newPayment, notes: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="paymentLink">Payment Link (Optional)</Label>
-              <Input
-                id="paymentLink"
-                placeholder="https://..."
-                value={newPayment.paymentLink || ''}
-                onChange={(e) => setNewPayment({ ...newPayment, paymentLink: e.target.value })}
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="recurring" className="flex items-center space-x-2 cursor-pointer">
-                <Switch
-                  id="recurring"
-                  checked={newPayment.recurring || false}
-                  onCheckedChange={(checked) => setNewPayment({ ...newPayment, recurring: checked })}
-                />
-                <span>Recurring Payment</span>
-              </Label>
-
-              {newPayment.recurring && (
-                <Select
-                  onValueChange={(value) => setNewPayment({
-                    ...newPayment,
-                    recurringPeriod: value as Payment['recurringPeriod']
-                  })}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select frequency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                    <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="quarterly">Quarterly</SelectItem>
-                    <SelectItem value="annually">Annually</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            <div>
-              <Label className="mb-2 block">Notification Settings</Label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="email-notify"
-                    checked={newPayment.notificationSettings?.email || false}
-                    onCheckedChange={(checked) => setNewPayment({
-                      ...newPayment,
-                      notificationSettings: {
-                        email: checked,
-                        sms: newPayment.notificationSettings?.sms ?? false,
-                        push: newPayment.notificationSettings?.push ?? true,
-                        whatsapp: newPayment.notificationSettings?.whatsapp ?? false,
-                        timing: newPayment.notificationSettings?.timing ?? [1, 3],
-                        sound: newPayment.notificationSettings?.sound ?? 'standard'
-                      }
-                    })}
-                  />
-                  <Label htmlFor="email-notify">Email</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="sms-notify"
-                    checked={newPayment.notificationSettings?.sms || false}
-                    onCheckedChange={(checked) => setNewPayment({
-                      ...newPayment,
-                      notificationSettings: {
-                        email: newPayment.notificationSettings?.email ?? true,
-                        sms: checked,
-                        push: newPayment.notificationSettings?.push ?? true,
-                        whatsapp: newPayment.notificationSettings?.whatsapp ?? false,
-                        timing: newPayment.notificationSettings?.timing ?? [1, 3],
-                        sound: newPayment.notificationSettings?.sound ?? 'standard'
-                      }
-                    })}
-                  />
-                  <Label htmlFor="sms-notify">SMS</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="push-notify"
-                    checked={newPayment.notificationSettings?.push || false}
-                    onCheckedChange={(checked) => setNewPayment({
-                      ...newPayment,
-                      notificationSettings: {
-                        email: newPayment.notificationSettings?.email ?? true,
-                        sms: newPayment.notificationSettings?.sms ?? false,
-                        push: checked,
-                        whatsapp: newPayment.notificationSettings?.whatsapp ?? false,
-                        timing: newPayment.notificationSettings?.timing ?? [1, 3],
-                        sound: newPayment.notificationSettings?.sound ?? 'standard'
-                      }
-                    })}
-                  />
-                  <Label htmlFor="push-notify">Push</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="whatsapp-notify"
-                    checked={newPayment.notificationSettings?.whatsapp || false}
-                    onCheckedChange={(checked) => setNewPayment({
-                      ...newPayment,
-                      notificationSettings: {
-                        email: newPayment.notificationSettings?.email ?? true,
-                        sms: newPayment.notificationSettings?.sms ?? false,
-                        push: newPayment.notificationSettings?.push ?? true,
-                        whatsapp: checked,
-                        timing: newPayment.notificationSettings?.timing ?? [1, 3],
-                        sound: newPayment.notificationSettings?.sound ?? 'standard'
-                      }
-                    })}
-                  />
-                  <Label htmlFor="whatsapp-notify">WhatsApp</Label>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <Label className="mb-2 block">Emotional Tone</Label>
-              <ToggleGroup type="single" className="justify-start">
-                <ToggleGroupItem
-                  value="gentle"
-                  aria-label="Gentle reminder tone"
-                  className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-900 dark:data-[state=on]:bg-blue-900 dark:data-[state=on]:text-blue-100"
-                  onClick={() => setNewPayment({ ...newPayment, emotionalTone: 'gentle' })}
-                >
-                  <span className="mr-1">😊</span> Gentle
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="professional"
-                  aria-label="Professional reminder tone"
-                  className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-900 dark:data-[state=on]:bg-blue-900 dark:data-[state=on]:text-blue-100"
-                  onClick={() => setNewPayment({ ...newPayment, emotionalTone: 'professional' })}
-                >
-                  <span className="mr-1">🤝</span> Professional
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  value="urgent"
-                  aria-label="Urgent reminder tone"
-                  className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-900 dark:data-[state=on]:bg-blue-900 dark:data-[state=on]:text-blue-100"
-                  onClick={() => setNewPayment({ ...newPayment, emotionalTone: 'urgent' })}
-                >
-                  <span className="mr-1">⚠️</span> Urgent
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddPaymentOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddPayment}>Create Reminder</Button>
-          </DialogFooter>
+          <PaymentReminderGuide />
         </DialogContent>
       </Dialog>
 
-      {/* Edit Payment Dialog */}
-      <Dialog open={isEditPaymentOpen} onOpenChange={setIsEditPaymentOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Edit Payment Reminder</DialogTitle>
-            <DialogDescription>
-              Update your payment reminder details.
-            </DialogDescription>
-          </DialogHeader>
-
-          {editingPayment && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-title">Payment Title</Label>
-                  <Input
-                    id="edit-title"
-                    value={editingPayment.title}
-                    onChange={(e) => setEditingPayment({ ...editingPayment, title: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-amount">Amount</Label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="edit-amount"
-                      type="number"
-                      className="pl-8"
-                      value={editingPayment.amount}
-                      onChange={(e) => setEditingPayment({ ...editingPayment, amount: parseFloat(e.target.value) || 0 })}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-dueDate">Due Date</Label>
-                  <Input
-                    id="edit-dueDate"
-                    type="date"
-                    value={editingPayment.dueDate.toISOString().split('T')[0]}
-                    onChange={(e) => setEditingPayment({
-                      ...editingPayment,
-                      dueDate: new Date(e.target.value)
-                    })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-category">Category</Label>
-                  <Select
-                    defaultValue={editingPayment.category}
-                    onValueChange={(value) => setEditingPayment({
-                      ...editingPayment,
-                      category: value as Category
-                    })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="utilities">Utilities</SelectItem>
-                      <SelectItem value="subscriptions">Subscriptions</SelectItem>
-                      <SelectItem value="loans">Loans</SelectItem>
-                      <SelectItem value="rent">Rent</SelectItem>
-                      <SelectItem value="mortgage">Mortgage</SelectItem>
-                      <SelectItem value="insurance">Insurance</SelectItem>
-                      <SelectItem value="credit-card">Credit Card</SelectItem>
-                      <SelectItem value="investments">Investments</SelectItem>
-                      <SelectItem value="education">Education</SelectItem>
-                      <SelectItem value="healthcare">Healthcare</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-notes">Notes (Optional)</Label>
-                <Input
-                  id="edit-notes"
-                  value={editingPayment.notes || ''}
-                  onChange={(e) => setEditingPayment({ ...editingPayment, notes: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-paymentLink">Payment Link (Optional)</Label>
-                <Input
-                  id="edit-paymentLink"
-                  value={editingPayment.paymentLink || ''}
-                  onChange={(e) => setEditingPayment({ ...editingPayment, paymentLink: e.target.value })}
-                />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="edit-recurring" className="flex items-center space-x-2 cursor-pointer">
-                  <Switch
-                    id="edit-recurring"
-                    checked={editingPayment.recurring || false}
-                    onCheckedChange={(checked) => setEditingPayment({ ...editingPayment, recurring: checked })}
-                  />
-                  <span>Recurring Payment</span>
-                </Label>
-
-                {editingPayment.recurring && (
-                  <Select
-                    defaultValue={editingPayment.recurringPeriod}
-                    onValueChange={(value) => setEditingPayment({
-                      ...editingPayment,
-                      recurringPeriod: value as Payment['recurringPeriod']
-                    })}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                      <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="quarterly">Quarterly</SelectItem>
-                      <SelectItem value="annually">Annually</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-
-              <div>
-                <Label className="mb-2 block">Notification Settings</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="edit-email-notify"
-                      checked={editingPayment.notificationSettings?.email || false}
-                      onCheckedChange={(checked) => setEditingPayment({
-                        ...editingPayment,
-                        notificationSettings: {
-                          ...editingPayment.notificationSettings,
-                          email: checked
-                        }
-                      })}
-                    />
-                    <Label htmlFor="edit-email-notify">Email</Label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="edit-sms-notify"
-                      checked={editingPayment.notificationSettings?.sms || false}
-                      onCheckedChange={(checked) => setEditingPayment({
-                        ...editingPayment,
-                        notificationSettings: {
-                          ...editingPayment.notificationSettings,
-                          sms: checked
-                        }
-                      })}
-                    />
-                    <Label htmlFor="edit-sms-notify">SMS</Label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="edit-push-notify"
-                      checked={editingPayment.notificationSettings?.push || false}
-                      onCheckedChange={(checked) => setEditingPayment({
-                        ...editingPayment,
-                        notificationSettings: {
-                          ...editingPayment.notificationSettings,
-                          push: checked
-                        }
-                      })}
-                    />
-                    <Label htmlFor="edit-push-notify">Push</Label>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="edit-whatsapp-notify"
-                      checked={editingPayment.notificationSettings?.whatsapp || false}
-                      onCheckedChange={(checked) => setEditingPayment({
-                        ...editingPayment,
-                        notificationSettings: {
-                          ...editingPayment.notificationSettings,
-                          whatsapp: checked
-                        }
-                      })}
-                    />
-                    <Label htmlFor="edit-whatsapp-notify">WhatsApp</Label>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <Label className="mb-2 block">Status</Label>
-                <Select
-                  defaultValue={editingPayment.status}
-                  onValueChange={(value) => setEditingPayment({
-                    ...editingPayment,
-                    status: value as Payment['status']
-                  })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="upcoming">Upcoming</SelectItem>
-                    <SelectItem value="overdue">Overdue</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label className="mb-2 block">Emotional Tone</Label>
-                <ToggleGroup type="single" value={editingPayment.emotionalTone} className="justify-start">
-                  <ToggleGroupItem
-                    value="gentle"
-                    aria-label="Gentle reminder tone"
-                    className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-900 dark:data-[state=on]:bg-blue-900 dark:data-[state=on]:text-blue-100"
-                    onClick={() => setEditingPayment({ ...editingPayment, emotionalTone: 'gentle' })}
-                  >
-                    <span className="mr-1">😊</span> Gentle
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    value="professional"
-                    aria-label="Professional reminder tone"
-                    className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-900 dark:data-[state=on]:bg-blue-900 dark:data-[state=on]:text-blue-100"
-                    onClick={() => setEditingPayment({ ...editingPayment, emotionalTone: 'professional' })}
-                  >
-                    <span className="mr-1">🤝</span> Professional
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    value="urgent"
-                    aria-label="Urgent reminder tone"
-                    className="data-[state=on]:bg-blue-100 data-[state=on]:text-blue-900 dark:data-[state=on]:bg-blue-900 dark:data-[state=on]:text-blue-100"
-                    onClick={() => setEditingPayment({ ...editingPayment, emotionalTone: 'urgent' })}
-                  >
-                    <span className="mr-1">⚠️</span> Urgent
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditPaymentOpen(false)}>Cancel</Button>
-            <Button onClick={handleEditPayment}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Share Payment Dialog */}
-      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Share Payment Reminder</DialogTitle>
-            <DialogDescription>
-              Share this payment reminder with others.
-            </DialogDescription>
-          </DialogHeader>
-
-          {sharingPayment && (
-            <div className="py-4 space-y-4">
-              <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <div className={`p-2 rounded-full ${getCategoryColor(sharingPayment.category)}`}>
-                    {getCategoryIcon(sharingPayment.category)}
-                  </div>
-                  <div>
-                    <h3 className="font-medium">{sharingPayment.title}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {formatCurrency(sharingPayment.amount)} · Due {formatDate(sharingPayment.dueDate)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <Label>People with access</Label>
-                {sharingPayment.sharedWith && sharingPayment.sharedWith.length > 0 ? (
-                  <div className="space-y-2">
-                    {sharingPayment.sharedWith.map(user => (
-                      <div key={user.id} className="flex items-center justify-between p-2 rounded-lg border">
-                        <div className="flex items-center space-x-3">
-                          <Avatar>
-                            <AvatarImage src="" />
-                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">{user.name}</div>
-                            <div className="text-sm text-muted-foreground">{user.email}</div>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setSharingPayment({
-                            ...sharingPayment,
-                            sharedWith: sharingPayment.sharedWith?.filter(u => u.id !== user.id)
-                          })}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center p-4 border rounded-lg">
-                    <Users className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                    <p className="text-sm text-muted-foreground">No one has access yet</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Add people</Label>
-                <div className="flex space-x-2">
-                  <Input
-                    id="email"
-                    placeholder="Email address"
-                    className="flex-grow"
-                  />
-                  <Button>
-                    Add
-                  </Button>
-                </div>
-              </div>
-
-              <div className="border-t pt-4">
-                <div className="flex items-center space-x-2">
-                  <Switch id="notify-shared" />
-                  <Label htmlFor="notify-shared">Notify when paid</Label>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  When someone marks this as paid, you'll get a notification.
-                </p>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsShareDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSharePayment}>Share</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* AI Assistant Dialog */}
-      <Dialog open={isAIAssistantOpen} onOpenChange={setIsAIAssistantOpen}>
-        <DialogContent className="sm:max-w-[500px] h-[600px] flex flex-col overflow-hidden">
-          <DialogHeader className="border-b pb-4">
-            <div className="flex items-center">
-              <div className="h-10 w-10 rounded-full bg-gradient-to-r from-sky-500 to-blue-600 flex items-center justify-center mr-3">
-                <span className="text-xl text-white">🤖</span>
-              </div>
-              <div>
-                <DialogTitle>Finance Buddy AI</DialogTitle>
-                <DialogDescription>
-                  Your personal finance assistant
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-y-auto py-4 space-y-4">
-            {aiMessages.map((message) => (
-              <div key={message.id} className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}>
-                <div className={`rounded-lg p-3 max-w-[80%] ${
-                  message.isUser
-                    ? 'bg-sky-500 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800'
-                }`}>
-                  {message.text}
-                </div>
-              </div>
-            ))}
-
-            {isAiTyping && (
-              <div className="flex justify-start">
-                <div className="rounded-lg p-3 bg-gray-100 dark:bg-gray-800">
-                  <div className="flex space-x-1">
-                    <div className="h-2 w-2 rounded-full bg-sky-500 animate-bounce" />
-                    <div className="h-2 w-2 rounded-full bg-sky-500 animate-bounce delay-100" />
-                    <div className="h-2 w-2 rounded-full bg-sky-500 animate-bounce delay-200" />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-
-          <div className="border-t pt-4">
-            <div className="flex space-x-2">
-              <Input
-                value={aiInput}
-                onChange={(e) => setAiInput(e.target.value)}
-                placeholder="Ask about your payments..."
-                className="flex-grow"
-                disabled={isAiTyping}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleAiSend();
-                  }
-                }}
-              />
-              <Button
-                onClick={handleAiSend}
-                disabled={isAiTyping || !aiInput.trim()}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m22 2-7 20-4-9-9-4Z" />
-                  <path d="M22 2 11 13" />
-                </svg>
-              </Button>
-            </div>
-            <p className="text-xs text-center text-muted-foreground mt-2">
-              Powered by AI to help with your payment reminders
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Achievements Dialog */}
-      <Dialog open={isAchievementDialogOpen} onOpenChange={setIsAchievementDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <Award className="h-5 w-5 mr-2 text-yellow-500" />
-              Your Achievements
-            </DialogTitle>
-            <DialogDescription>
-              Track your financial milestones
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4 space-y-4">
-            {achievements.map(achievement => (
-              <motion.div
-                key={achievement.id}
-                initial={achievement === selectedAchievement ? { scale: 1.05 } : { scale: 1 }}
-                animate={{ scale: 1 }}
-                whileHover={{ scale: 1.02 }}
-                className={`p-3 rounded-lg border ${
-                  achievement.unlocked
-                    ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
-                    : 'bg-gray-50 border-gray-200 dark:bg-gray-800/50 dark:border-gray-700'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className={`p-2 rounded-full ${
-                    achievement.unlocked
-                      ? 'bg-green-100 dark:bg-green-800'
-                      : 'bg-gray-100 dark:bg-gray-700'
-                  }`}>
-                    {achievement.icon}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <div className="font-medium">{achievement.title}</div>
-                      {achievement.unlocked && (
-                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                          Unlocked
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground">{achievement.description}</div>
-                    {achievement.progress !== undefined && achievement.maxProgress !== undefined && (
-                      <div className="mt-2">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                          <span>Progress</span>
-                          <span>{achievement.progress} / {achievement.maxProgress}</span>
-                        </div>
-                        <Progress value={(achievement.progress / achievement.maxProgress) * 100} className="h-2" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Savings Recommendation Dialog */}
-      <Dialog open={isSavingsDialogOpen} onOpenChange={setIsSavingsDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <Gift className="h-5 w-5 mr-2 text-green-500" />
-              Smart Saving Recommendations
-            </DialogTitle>
-            <DialogDescription>
-              Personalized tips to help you save money
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4 space-y-4">
-            {currentSavingsTip ? (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="p-4 rounded-lg border bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-medium text-green-800 dark:text-green-300">{currentSavingsTip.title}</h3>
-                    <p className="text-sm text-green-700 dark:text-green-400 mt-1">{currentSavingsTip.description}</p>
-                  </div>
-                  <Badge className="bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-300">
-                    Save {formatCurrency(currentSavingsTip.potentialSavings)}/{currentSavingsTip.timePeriod}
-                  </Badge>
-                </div>
-                <div className="mt-3 flex items-center">
-                  <Badge variant="outline" className="text-xs">
-                    {currentSavingsTip.difficulty === 'easy' ? '🟢 Easy' : currentSavingsTip.difficulty === 'medium' ? '🟠 Medium' : '🔴 Hard'}
-                  </Badge>
-                </div>
-              </motion.div>
-            ) : (
-              <div className="text-center py-4 text-muted-foreground">
-                <Gift className="h-12 w-12 mx-auto mb-2 text-green-500 opacity-50" />
-                <p>No savings tip available right now.</p>
-              </div>
-            )}
-
-            <div className="text-center space-y-2 pt-2">
-              <p className="text-sm text-muted-foreground">
-                These recommendations are based on your payment history and spending patterns.
-              </p>
-              <Button variant="outline" size="sm" onClick={() => setIsAIAssistantOpen(true)}>
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Get Personalized Advice
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Feedback Button */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <Button
+          variant="outline"
+          size="sm"
+          className="bg-white dark:bg-gray-800 shadow-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+          onClick={() => window.open('mailto:feedback@financetools.in', '_blank')}
+        >
+          <MessageSquare className="h-4 w-4 mr-2" />
+          Feedback
+        </Button>
+      </div>
     </div>
   );
 };

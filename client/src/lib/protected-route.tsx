@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
+import { useLocation } from "wouter";
 
 export function AdminProtectedRoute({
   path,
@@ -10,6 +11,7 @@ export function AdminProtectedRoute({
   component: React.ComponentType<any>;
 }) {
   const { user, isLoading, isAdmin } = useAuth();
+  const [, navigate] = useLocation();
 
   if (isLoading) {
     return (
@@ -22,7 +24,7 @@ export function AdminProtectedRoute({
   }
 
   if (!user?.isAdmin) {
-    window.location.href = '/admin-login';
+    navigate('/admin-login');
     return null;
   }
 
